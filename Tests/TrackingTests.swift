@@ -10,6 +10,9 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(journal.halfLifeDays, 7)
         XCTAssertThrowsError(try JSONDecoder().decode(Journal.self, from: Data(#"{"version":999}"#.utf8)))
     }
+    func testNewJournalDoesNotInventADosingSchedule() {
+        XCTAssertTrue(Journal().schedule.occurrences(after: Date(), count: 1).isEmpty)
+    }
     func testWeightSummaryUsesChronologyAndExcludesFutureMeasurements() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let summary = WeightSummary(entries: [

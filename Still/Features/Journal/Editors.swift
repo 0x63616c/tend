@@ -159,6 +159,7 @@ struct ScheduleEditor: View {
     @State private var days: Set<Int> = []
     @State private var time = Date()
     @State private var reminders = false
+    @State private var previewStatus: String?
     var body: some View {
         NavigationStack {
             Form {
@@ -172,6 +173,10 @@ struct ScheduleEditor: View {
                     Section {
                         NotificationPreview(time: time)
                             .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
+                        Button("Send test notification") {
+                            Task { previewStatus = await store.sendTestReminder() }
+                        }
+                        if let previewStatus { Text(previewStatus).font(.caption).foregroundStyle(.secondary) }
                     } header: { Text("Notification preview") }
                 }
             }.navigationTitle("Your schedule").navigationBarTitleDisplayMode(.inline)

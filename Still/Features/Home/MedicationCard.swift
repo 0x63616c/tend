@@ -85,7 +85,7 @@ struct MedicationCard: View {
                     }
                     Section("Projection") { Text("The dashed line assumes no further doses unless Plans is on. Plans includes only future doses you explicitly entered. Your weekly schedule does not invent dose amounts.") }
                     Section("Half-life") {
-                        Text("Current assumption: \(number(halfLife)) days. Semaglutide labeling describes approximately 1 week; tirzepatide approximately 5 days. You can change the assumption in Settings.")
+                        Text("Current assumption: \(number(halfLife)) days. Semaglutide labeling describes approximately 1 week; tirzepatide approximately 5 days. You can change the assumption in Treatment details.")
                         Link("Semaglutide prescribing information", destination: URL(string: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2026/209637s038lbl.pdf")!)
                         Link("Tirzepatide prescribing information", destination: URL(string: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=0818426a-53eb-4db7-9609-bbae1e7a3964")!)
                     }

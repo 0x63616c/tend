@@ -61,7 +61,7 @@ public enum TrackingError: LocalizedError {
 }
 
 public struct DoseSchedule: Codable, Equatable, Sendable {
-    public var weekdays: Set<Int> = [2]
+    public var weekdays: Set<Int> = []
     public var startDate = Date()
     public var hour = 9
     public var minute = 0

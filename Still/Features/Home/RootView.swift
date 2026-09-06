@@ -44,7 +44,7 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
-                            if let nextDate { Text(nextDate, format: .dateTime.weekday(.wide)).font(.title3.weight(.semibold)); Text(nextDate, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) }
+                            if let nextDate { Text(nextDate, format: .dateTime.weekday(.wide)).font(.title3.weight(.semibold)); Text(nextDate, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) } else { Button("Set your schedule") { scheduleSheet = true }.font(.headline) }
                             Button { doseSheet = true } label: { Label("Log dose", systemImage: "plus").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 3) }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("logDose")
                         }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 132).card()
                         Button { vialSheet = true } label: {
@@ -85,7 +85,7 @@ struct TodayView: View {
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
                 .sheet(isPresented: $scheduleSheet) { ScheduleEditor() }
                 .sheet(isPresented: $settingsSheet) { SettingsView() }
-                .sheet(isPresented: $weightDetail) { ProgressViewScreen() }
+                .sheet(isPresented: $weightDetail) { ProgressViewScreen(isSheet: true) }
                 .sheet(isPresented: $vialSheet) { VialEditor(vial: store.journal.vials.sorted { $0.received > $1.received }.first) }
         }
     }
@@ -126,6 +126,8 @@ struct WeightChart: View {
 }
 
 struct ProgressViewScreen: View {
+    var isSheet = false
+    @Environment(\.dismiss) private var dismiss
     @Environment(Store.self) private var store
     @State private var range = 90
     @State private var adding = false
@@ -156,7 +158,10 @@ struct ProgressViewScreen: View {
                     Text("Based on recorded weights in this period. Weekly change is the average from first to latest entry, not a prediction. Future entries are excluded.").font(.caption).foregroundStyle(.secondary)
                 }.padding(22)
             }.background(Theme.background).navigationTitle("Progress").navigationBarTitleDisplayMode(.inline)
-                .toolbar { Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Log weight") }
+                 .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) { Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Log weight") }
+                    if isSheet { ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } } }
+                }
                 .sheet(isPresented: $adding) { WeightEditor() }
         }
     }

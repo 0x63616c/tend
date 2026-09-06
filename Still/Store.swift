@@ -12,6 +12,9 @@ import UserNotifications
         demo = ProcessInfo.processInfo.arguments.contains("--demo")
         let root = URL.applicationSupportDirectory.appendingPathComponent("Still", isDirectory: true)
         file = JournalFile(url: root.appendingPathComponent(ProcessInfo.processInfo.arguments.contains("--uitest") ? "test.json" : "journal.json"))
+        if ProcessInfo.processInfo.arguments.contains("--uitest"), ProcessInfo.processInfo.arguments.contains("--reset-test-journal") {
+            try? FileManager.default.removeItem(at: file.url)
+        }
         if demo { journal = Self.demoJournal() }
         else {
             do { journal = try file.load() } catch { canWrite = false; self.error = "Your journal could not be opened. Please keep the app installed to preserve your data. \(error.localizedDescription)" }
@@ -39,6 +42,22 @@ import UserNotifications
     }
     func delete(weight: WeightEntry) { var next = journal; next.weights.removeAll { $0.id == weight.id }; _ = commit(next) }
     func delete(dose: DoseEntry) { var next = journal; next.doses.removeAll { $0.id == dose.id }; _ = commit(next) }
+    static let reminderTitle = "Time for your check-in"
+    static let reminderBody = "Open Tend to review your schedule and log your dose."
+    func sendTestReminder() async -> String {
+        let center = UNUserNotificationCenter.current()
+        do {
+            guard try await center.requestAuthorization(options: [.alert, .sound]) else {
+                return "Notifications are off in iPhone Settings."
+            }
+            let content = UNMutableNotificationContent()
+            content.title = Self.reminderTitle
+            content.body = Self.reminderBody
+            content.sound = .default
+            try await center.add(UNNotificationRequest(identifier: "tend-preview", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)))
+            return "Leave Tend to see it in 5 seconds."
+        } catch { return "Could not send a test notification. Try again." }
+    }
     func syncReminders() async {
         guard !demo else { reminderStatus = "Demo • no notifications"; return }
         let center = UNUserNotificationCenter.current()
@@ -50,8 +69,8 @@ import UserNotifications
             center.removeAllPendingNotificationRequests()
             for day in journal.schedule.weekdays.sorted() {
                 let content = UNMutableNotificationContent()
-                content.title = "Time for your check-in"
-                content.body = "Open Tend to review your schedule and log your dose."
+                content.title = Self.reminderTitle
+                content.body = Self.reminderBody
                 content.sound = .default
                 let components = DateComponents(hour: journal.schedule.hour, minute: journal.schedule.minute, weekday: day)
                 let request = UNNotificationRequest(identifier: "still-weekday-\(day)", content: content, trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))

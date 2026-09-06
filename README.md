@@ -2,7 +2,7 @@
 
 A native, local-first iPhone journal for GLP-1 treatment. Built with SwiftUI and Swift Charts, with no sign-in, tracking SDKs or runtime dependencies.
 
-**In development. TestFlight availability has not yet been verified.**
+**Beta in preparation. Builds have been uploaded to Apple; tester availability is still being verified.**
 
 Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; review progress and estimated medication decay; record appetite and nausea; and choose weekly reminder days. Edit past records and distinguish future plans from actual entries. Discover includes bundled original articles and recipes. The assistant is a coming-soon preview, not a connected AI service.
 
@@ -25,7 +25,7 @@ open Still.xcodeproj
 
 Choose the Still scheme and an iPhone simulator. The internal target and bundle identifier still use the earlier project name. For a device build, select your own development team.
 
-Launch with `--demo` for synthetic, in-memory sample data. Demo mode never writes to your health journal or schedules notifications. `--uitest` selects a separate test journal when used without demo mode.
+Launch with `--demo` for synthetic, in-memory sample data. Demo mode never writes to your health journal or schedules automatic reminders. The explicit test-notification button can send a preview when you request one. `--uitest` selects a separate test journal when used without demo mode.
 
 ## Tests
 
