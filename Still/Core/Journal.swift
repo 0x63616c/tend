@@ -7,6 +7,8 @@ public enum WeightUnit: String, Codable, CaseIterable, Sendable {
 }
 public struct Journal: Codable, Equatable, Sendable {
     public var version = 1
+    public var goal: WeightGoal?
+    public var checkIns: [CheckIn] = []
     public var vials: [Vial] = []
     public var syringeUnitsPerML: Double?
     public var halfLifeDays: Double = 7
@@ -19,6 +21,26 @@ public struct Journal: Codable, Equatable, Sendable {
     public var unit: WeightUnit = .lb
     public var schedule = DoseSchedule()
     public init() {}
+    private enum CodingKeys: String, CodingKey { case version, goal, checkIns, vials, syringeUnitsPerML, halfLifeDays, appearance, weights, doses, medication, concentration, containerML, unit, schedule }
+    public init(from decoder: Decoder) throws {
+        self.init()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        guard version == 1 else { throw TrackingError.invalidFile }
+        if let value = try values.decodeIfPresent(WeightGoal.self, forKey: .goal) { goal = value }
+        if let value = try values.decodeIfPresent([CheckIn].self, forKey: .checkIns) { checkIns = value }
+        if let value = try values.decodeIfPresent([Vial].self, forKey: .vials) { vials = value }
+        if let value = try values.decodeIfPresent(Double.self, forKey: .syringeUnitsPerML) { syringeUnitsPerML = value }
+        if let value = try values.decodeIfPresent(Double.self, forKey: .halfLifeDays) { halfLifeDays = value }
+        if let value = try values.decodeIfPresent(String.self, forKey: .appearance) { appearance = value }
+        if let value = try values.decodeIfPresent([WeightEntry].self, forKey: .weights) { weights = value }
+        if let value = try values.decodeIfPresent([DoseEntry].self, forKey: .doses) { doses = value }
+        if let value = try values.decodeIfPresent(String.self, forKey: .medication) { medication = value }
+        if let value = try values.decodeIfPresent(Double.self, forKey: .concentration) { concentration = value }
+        if let value = try values.decodeIfPresent(Double.self, forKey: .containerML) { containerML = value }
+        if let value = try values.decodeIfPresent(WeightUnit.self, forKey: .unit) { unit = value }
+        if let value = try values.decodeIfPresent(DoseSchedule.self, forKey: .schedule) { schedule = value }
+    }
 }
 public struct JournalFile {
     public let url: URL

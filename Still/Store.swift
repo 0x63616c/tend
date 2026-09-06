@@ -6,6 +6,7 @@ import UserNotifications
     var error: String?
     var reminderStatus = "Off"
     let demo: Bool
+    private var canWrite = true
     private let file: JournalFile
     init() {
         demo = ProcessInfo.processInfo.arguments.contains("--demo")
@@ -13,10 +14,11 @@ import UserNotifications
         file = JournalFile(url: root.appendingPathComponent(ProcessInfo.processInfo.arguments.contains("--uitest") ? "test.json" : "journal.json"))
         if demo { journal = Self.demoJournal() }
         else {
-            do { journal = try file.load() } catch { self.error = "Your journal could not be opened. Please keep the app installed to preserve your data. \(error.localizedDescription)" }
+            do { journal = try file.load() } catch { canWrite = false; self.error = "Your journal could not be opened. Please keep the app installed to preserve your data. \(error.localizedDescription)" }
         }
     }
     func commit(_ changed: Journal) -> Bool {
+        guard canWrite else { error = "Your existing journal could not be opened. Saving is paused to preserve it."; return false }
         do {
             if !demo { try file.save(changed) }
             journal = changed
@@ -24,7 +26,7 @@ import UserNotifications
         } catch { self.error = "Could not save. \(error.localizedDescription)"; return false }
     }
     func save(weight: WeightEntry) -> Bool {
-        guard weight.kilograms.isFinite && weight.kilograms > 0 else { error = TrackingError.invalidAmount.localizedDescription; return false }
+        guard EntryValidation.weight(weight.kilograms) else { error = TrackingError.invalidAmount.localizedDescription; return false }
         var next = journal
         next.weights.removeAll { $0.id == weight.id }; next.weights.append(weight)
         return commit(next)
@@ -75,6 +77,9 @@ import UserNotifications
         }
         for i in journal.doses.indices where journal.doses[i].date >= journal.vials[0].received {
             journal.doses[i].vialID = journal.vials[0].id
+        }
+        journal.checkIns = (0..<7).map { i in
+            CheckIn(date: today.addingTimeInterval(Double(-i * 2) * 86400), appetite: [3,2,3,4,3,2,4][i], nausea: [1,1,2,1,2,1,1][i])
         }
         return journal
     }

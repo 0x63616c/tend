@@ -3,6 +3,8 @@ import Charts
 
 struct MedicationCard: View {
     @Environment(Store.self) private var store
+    var expanded = false
+    @State private var detail = false
     @State private var selected: Date?
     @State private var info = false
     @State private var showPlans = false
@@ -20,44 +22,60 @@ struct MedicationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label("Medication level", systemImage: "waveform.path.ecg").font(.subheadline.weight(.semibold)).foregroundStyle(.indigo)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(store.journal.medication.uppercased()).font(.system(size: 10, weight: .bold)).tracking(1.6).foregroundStyle(Theme.pine)
+                    Text("Medication level").font(.headline)
+                }
                 Spacer()
                 Button { info = true } label: { Image(systemName: "info.circle").foregroundStyle(.secondary) }.accessibilityLabel("About medication estimates")
             }
-            HStack(alignment: .lastTextBaseline) {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(number(amount(at: selected ?? now), digits: 2)).font(.system(size: 38, weight: .bold, design: .rounded)).contentTransition(.numericText())
-                    Text("mg").font(.headline).foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(selected == nil ? "Estimated now" : "Estimate").font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                    if let selected { Text(selected, format: .dateTime.month(.abbreviated).day().hour()).font(.caption2).foregroundStyle(.secondary) }
-                    else { Text(store.journal.medication).font(.caption).foregroundStyle(.secondary) }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let timestamp = selected ?? context.date
+                let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: showPlans, now: context.date)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(value.formatted(.number.precision(.fractionLength(selected == nil ? 5 : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                        Text("mg").font(.headline).foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    HStack(spacing: 6) {
+                        Circle().fill(selected == nil ? Color.green : Theme.pine).frame(width: 5, height: 5)
+                        Text(selected == nil ? "Live model estimate" : "Model estimate").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(timestamp, format: selected == nil ? .dateTime.hour().minute().second() : .dateTime.month(.abbreviated).day().hour().minute()).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }
                 }
             }
             Chart {
                 ForEach(samples.filter { !$0.future }) { point in
-                    AreaMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount)).foregroundStyle(LinearGradient(colors: [.indigo.opacity(0.20), .indigo.opacity(0.01)], startPoint: .top, endPoint: .bottom))
-                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "History")).foregroundStyle(.indigo).lineStyle(StrokeStyle(lineWidth: 2.5))
+                    AreaMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount)).foregroundStyle(LinearGradient(colors: [Theme.pine.opacity(0.20), Theme.pine.opacity(0.01)], startPoint: .top, endPoint: .bottom))
+                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "History")).foregroundStyle(Theme.pine).lineStyle(StrokeStyle(lineWidth: 2.5))
                 }
                 ForEach(samples.filter { $0.date >= now }) { point in
-                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "Projection")).foregroundStyle(.indigo.opacity(0.65)).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "Projection")).foregroundStyle(Theme.pine.opacity(0.65)).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
                 }
                 RuleMark(x: .value("Now", now)).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(.indigo).symbolSize(55)
+                PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(Theme.pine).symbolSize(55)
             }
             .chartXSelection(value: $selected)
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
             .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
-            .frame(height: 145)
+            .frame(height: expanded ? 300 : 145)
+            .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart").contentShape(Rectangle()).simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
             .accessibilityLabel("Estimated medication decay. Solid line shows history; dashed line shows projection.")
             HStack(spacing: 14) {
                 Label("\(number(halfLife))d half-life", systemImage: "clock").font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Toggle("Plans", isOn: $showPlans).font(.caption).fixedSize().controlSize(.mini).accessibilityLabel("Include explicitly planned doses")
+                Button { showPlans.toggle() } label: {
+                    Label("Plans", systemImage: showPlans ? "checkmark.circle.fill" : "plus.circle").font(.caption.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 6).background(Theme.pine.opacity(0.1), in: Capsule())
+                }.accessibilityLabel("Include explicitly planned doses").accessibilityValue(showPlans ? "On" : "Off")
             }
         }.card()
+        .sheet(isPresented: $detail) {
+            NavigationStack {
+                ScrollView { MedicationCard(expanded: true).padding(16) }.background(Theme.background).navigationTitle("Medication").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { detail = false } }
+            }
+        }
         .sheet(isPresented: $info) {
             NavigationStack {
                 List {

@@ -1,0 +1,18 @@
+# Verification log
+
+## Core
+
+`swift test` passes 11 tests after the journal compatibility change. The new compatibility test failed on the older minimal journal fixture before implementation, then passed after default decoding was added. It also rejects an unknown future schema version. This verifies decoding, not the UI recovery experience.
+
+Covered: weight chronology and future filtering, future taken-dose rejection, local weekday scheduling across daylight saving, journal round-trip and historical medication snapshots, overdue resolution, explicit syringe scale conversion, half-life arithmetic, decimal entry validation, goal pace and check-in rating bounds.
+
+## UI
+
+The Discover walkthrough passed (one test, zero failures; `build/DiscoverQA.xcresult`) on a separate iPhone 17 Pro Max simulator. It exercises navigation, dose sheet presentation, Progress, Journal, Discover filtering and opening a recipe. This is not yet a complete create/edit/relaunch regression suite.
+
+## Remaining release checks
+
+- Full record create/edit/relaunch journeys and recovery after unreadable storage.
+- Actual notification delivery and permission-denial handling.
+- Accessibility, larger text, light/dark visual review and final screenshot curation.
+- Signing, archive, App Store Connect upload and verified TestFlight availability.

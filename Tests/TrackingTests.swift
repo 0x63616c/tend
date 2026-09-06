@@ -2,6 +2,14 @@ import XCTest
 @testable import StillCore
 
 final class TrackingTests: XCTestCase {
+    func testOlderJournalLoadsWithNewFieldsDefaultedAndFutureSchemaIsRejected() throws {
+        let old = Data(#"{"version":1,"weights":[],"doses":[],"medication":"Semaglutide"}"#.utf8)
+        let journal = try JSONDecoder().decode(Journal.self, from: old)
+        XCTAssertEqual(journal.checkIns, [])
+        XCTAssertEqual(journal.vials, [])
+        XCTAssertEqual(journal.halfLifeDays, 7)
+        XCTAssertThrowsError(try JSONDecoder().decode(Journal.self, from: Data(#"{"version":999}"#.utf8)))
+    }
     func testWeightSummaryUsesChronologyAndExcludesFutureMeasurements() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let summary = WeightSummary(entries: [
@@ -75,5 +83,29 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(MedicationLevel.remaining(at: week, doses: doses, medication: "Semaglutide", halfLifeDays: 7, now: start), 0.5, accuracy: 0.000001)
         XCTAssertEqual(MedicationLevel.remaining(at: week, doses: doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: start), 1.5, accuracy: 0.000001)
         XCTAssertEqual(MedicationLevel.remaining(at: start.addingTimeInterval(-1), doses: doses, medication: "Semaglutide", halfLifeDays: 7, now: start), 0)
+    }
+    func testWeightInputRejectsJunkAndImpossibleValuesAndSupportsLocaleDecimal() {
+        let us = Locale(identifier: "en_US")
+        XCTAssertEqual(EntryValidation.number("195.5", locale: us), 195.5)
+        XCTAssertEqual(EntryValidation.number("88,5", locale: Locale(identifier: "de_DE")), 88.5)
+        for input in ["12abc", "NaN", "1e4", "-90", "1,2,3", ""] { XCTAssertNil(EntryValidation.number(input, locale: us)) }
+        XCTAssertFalse(EntryValidation.weight(0))
+        XCTAssertFalse(EntryValidation.weight(900))
+        XCTAssertFalse(EntryValidation.weight(.infinity))
+        XCTAssertTrue(EntryValidation.weight(88.5))
+    }
+    func testGoalPaceUsesFutureDeadlineAndDoesNotInventCalories() {
+        let now = Date(timeIntervalSince1970: 1700000000)
+        let goal = WeightGoal(kilograms: 80, date: now.addingTimeInterval(10 * 7 * 86400))
+        XCTAssertEqual(goal.requiredWeeklyChange(current: 90, now: now), -1)
+        XCTAssertNil(WeightGoal(kilograms: 80, date: now).requiredWeeklyChange(current: 90, now: now))
+        XCTAssertNil(WeightGoal(kilograms: 80).requiredWeeklyChange(current: 90, now: now))
+    }
+    func testCheckInRequiresAChosenRatingAndOnlyAcceptsOneThroughFive() {
+        XCTAssertFalse(CheckIn(date: Date()).isValid)
+        XCTAssertTrue(CheckIn(date: Date(), appetite: 5).isValid)
+        XCTAssertTrue(CheckIn(date: Date(), nausea: 1).isValid)
+        XCTAssertFalse(CheckIn(date: Date(), appetite: 0, nausea: 1).isValid)
+        XCTAssertFalse(CheckIn(date: Date(), nausea: 6).isValid)
     }
 }

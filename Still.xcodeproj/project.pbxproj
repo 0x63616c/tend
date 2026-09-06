@@ -8,19 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		01A20BFD238D2EFD9811910E /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033134A7B3BB4B6F478EA308 /* Journal.swift */; };
-		08EFBED2BDEEABEC08A909C9 /* MedicationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADB758136B1D6CE3AED49B0 /* MedicationCard.swift */; };
+		119DCEA83562E277F719DB19 /* NotificationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */; };
 		1878A28B539F99DD562844CC /* StillUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76AB8C929B38B5C4144D9B93 /* StillUITests.swift */; };
-		240FD6C26F4F534CA4D39A65 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1FB4F931D7F4CC050E1E8B /* JournalView.swift */; };
+		2FD16E699C53DE49D376AAE6 /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE015459D9012AC01CCB817 /* CheckInView.swift */; };
+		3140DE520D3F985B4C17E938 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88C298B25AA8A1BB4ECED06C /* RootView.swift */; };
+		3157D1456611C3680162E340 /* GoalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B2E4421F97B007948FB5D9 /* GoalView.swift */; };
 		3CD4A7C29B6D56C13CBAE5BC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5B2539898EB583763A28A42 /* Assets.xcassets */; };
+		3D74D214CB3686FCADF7C2FA /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662E21DA06EBAF4ACE103502 /* DiscoverView.swift */; };
+		3D93F1753929C346DC2881EE /* CheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C633FA99EE68EF07BF980F /* CheckIn.swift */; };
+		4322E19FD46674AFE347A37C /* Editors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087DBA256BFFEE06713F93D /* Editors.swift */; };
+		5143590FA51C5A4C25D3EA51 /* EntryValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C02DC719DFE58F082CE559 /* EntryValidation.swift */; };
 		54A3F4BEE4EC1464A9F6E37B /* MedicationLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */; };
+		5833A4D6715DD9868B0D6652 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A35FC06520E46B3E0B1274 /* JournalView.swift */; };
 		590788E6635BD9FD18FF2A88 /* Vial.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91707FF75831793AF9F34D2 /* Vial.swift */; };
+		6F6D0EF2C198DA7ACE962775 /* WeightGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B716B1A6D87CF82AF4D5C204 /* WeightGoal.swift */; };
 		8977D2CCBBFBC92F397AFA6C /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7C6EB976A31E0351C41446 /* Store.swift */; };
-		96B081F9AB3851980DB28F40 /* VialViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93ED810C0674928DEEE15947 /* VialViews.swift */; };
+		974312F3351A76E7FC00B72C /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C74C889016FEBBA601994F /* TreatmentView.swift */; };
+		9D9BBA82477A78A62E3E8CFC /* AssistantPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442027E54FD77E3C6477DD6F /* AssistantPreview.swift */; };
+		A2684679232FBCDC19AB92D0 /* VialViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8E9F8D5F9A8A8CADA99485 /* VialViews.swift */; };
 		ADC60342778EA19EB546C959 /* StillApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B5DF07AF9BACBF2DFAEE064 /* StillApp.swift */; };
-		C11D4B8799ABD494C1F90BA6 /* Editors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEDCC3DB5A1153827CEA228 /* Editors.swift */; };
 		C58F3B5984579587CA3819F3 /* Tracking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A255FAD4D2F211E5EA8D78 /* Tracking.swift */; };
-		CC616ED2F0448C9CBDB0E75D /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F136C51FB1CE2C5987E77A8 /* RootView.swift */; };
-		D5E5812EDD0C4218CABDBA43 /* AssistantPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8F573558DD7650AF584B15 /* AssistantPreview.swift */; };
+		E13D4453B9589D60BEA30624 /* MedicationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE80821D19EEE53A53330E9D /* MedicationCard.swift */; };
 		E20E4CD5A0ACD78E26AE1CA7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 14C4753ACE9F975EC7EF42BA /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -36,22 +44,30 @@
 
 /* Begin PBXFileReference section */
 		033134A7B3BB4B6F478EA308 /* Journal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Journal.swift; sourceTree = "<group>"; };
-		0F8F573558DD7650AF584B15 /* AssistantPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPreview.swift; sourceTree = "<group>"; };
+		08C633FA99EE68EF07BF980F /* CheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckIn.swift; sourceTree = "<group>"; };
+		0CE015459D9012AC01CCB817 /* CheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInView.swift; sourceTree = "<group>"; };
 		14C4753ACE9F975EC7EF42BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		17C74C889016FEBBA601994F /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
 		193593C1E058E2D289F796C2 /* Still.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Still.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2087DBA256BFFEE06713F93D /* Editors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Editors.swift; sourceTree = "<group>"; };
 		25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationLevel.swift; sourceTree = "<group>"; };
 		3B5DF07AF9BACBF2DFAEE064 /* StillApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StillApp.swift; sourceTree = "<group>"; };
+		442027E54FD77E3C6477DD6F /* AssistantPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPreview.swift; sourceTree = "<group>"; };
+		52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreview.swift; sourceTree = "<group>"; };
+		662E21DA06EBAF4ACE103502 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
+		66C02DC719DFE58F082CE559 /* EntryValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryValidation.swift; sourceTree = "<group>"; };
 		70A255FAD4D2F211E5EA8D78 /* Tracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tracking.swift; sourceTree = "<group>"; };
 		76AB8C929B38B5C4144D9B93 /* StillUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StillUITests.swift; sourceTree = "<group>"; };
-		8AEDCC3DB5A1153827CEA228 /* Editors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Editors.swift; sourceTree = "<group>"; };
-		8F136C51FB1CE2C5987E77A8 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		93ED810C0674928DEEE15947 /* VialViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VialViews.swift; sourceTree = "<group>"; };
+		88C298B25AA8A1BB4ECED06C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		94A35FC06520E46B3E0B1274 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
+		B716B1A6D87CF82AF4D5C204 /* WeightGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightGoal.swift; sourceTree = "<group>"; };
+		BE80821D19EEE53A53330E9D /* MedicationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationCard.swift; sourceTree = "<group>"; };
 		D5B2539898EB583763A28A42 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		DADB758136B1D6CE3AED49B0 /* MedicationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationCard.swift; sourceTree = "<group>"; };
-		DC1FB4F931D7F4CC050E1E8B /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		DCBB333B8EFD53025AD19FD5 /* StillUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StillUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6B2E4421F97B007948FB5D9 /* GoalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalView.swift; sourceTree = "<group>"; };
 		EE7C6EB976A31E0351C41446 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		F91707FF75831793AF9F34D2 /* Vial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vial.swift; sourceTree = "<group>"; };
+		FE8E9F8D5F9A8A8CADA99485 /* VialViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VialViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -64,6 +80,14 @@
 			);
 			sourceTree = "<group>";
 		};
+		0DF162E28A0A94221C852B6B /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				E6B2E4421F97B007948FB5D9 /* GoalView.swift */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
 		1AD6987513E67B5BBC1578E8 /* Still */ = {
 			isa = PBXGroup;
 			children = (
@@ -72,7 +96,7 @@
 				3B5DF07AF9BACBF2DFAEE064 /* StillApp.swift */,
 				EE7C6EB976A31E0351C41446 /* Store.swift */,
 				234F336CB0C1CBD580FBC97C /* Core */,
-				D83192C907A1885299B1D80F /* Views */,
+				8B17C10B5A4CE388082BC117 /* Features */,
 			);
 			path = Still;
 			sourceTree = "<group>";
@@ -80,12 +104,24 @@
 		234F336CB0C1CBD580FBC97C /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				08C633FA99EE68EF07BF980F /* CheckIn.swift */,
+				66C02DC719DFE58F082CE559 /* EntryValidation.swift */,
 				033134A7B3BB4B6F478EA308 /* Journal.swift */,
 				25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */,
 				70A255FAD4D2F211E5EA8D78 /* Tracking.swift */,
 				F91707FF75831793AF9F34D2 /* Vial.swift */,
+				B716B1A6D87CF82AF4D5C204 /* WeightGoal.swift */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		3A79F72C9900C357EAED6D02 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				BE80821D19EEE53A53330E9D /* MedicationCard.swift */,
+				88C298B25AA8A1BB4ECED06C /* RootView.swift */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 		840A35E61B17558FC8F6BA24 /* Products */ = {
@@ -97,6 +133,18 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8B17C10B5A4CE388082BC117 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A3163AFEF080F7066FA1A7B4 /* Discover */,
+				3A79F72C9900C357EAED6D02 /* Home */,
+				FB260A79805A3451CCFBD77A /* Journal */,
+				0DF162E28A0A94221C852B6B /* Progress */,
+				B246576C00ECB04299C54DC7 /* Treatment */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
 		9A301BD77B68AE8BFEFBB73F /* StillUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -105,17 +153,33 @@
 			path = StillUITests;
 			sourceTree = "<group>";
 		};
-		D83192C907A1885299B1D80F /* Views */ = {
+		A3163AFEF080F7066FA1A7B4 /* Discover */ = {
 			isa = PBXGroup;
 			children = (
-				0F8F573558DD7650AF584B15 /* AssistantPreview.swift */,
-				8AEDCC3DB5A1153827CEA228 /* Editors.swift */,
-				DC1FB4F931D7F4CC050E1E8B /* JournalView.swift */,
-				DADB758136B1D6CE3AED49B0 /* MedicationCard.swift */,
-				8F136C51FB1CE2C5987E77A8 /* RootView.swift */,
-				93ED810C0674928DEEE15947 /* VialViews.swift */,
+				442027E54FD77E3C6477DD6F /* AssistantPreview.swift */,
+				662E21DA06EBAF4ACE103502 /* DiscoverView.swift */,
 			);
-			path = Views;
+			path = Discover;
+			sourceTree = "<group>";
+		};
+		B246576C00ECB04299C54DC7 /* Treatment */ = {
+			isa = PBXGroup;
+			children = (
+				52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */,
+				17C74C889016FEBBA601994F /* TreatmentView.swift */,
+				FE8E9F8D5F9A8A8CADA99485 /* VialViews.swift */,
+			);
+			path = Treatment;
+			sourceTree = "<group>";
+		};
+		FB260A79805A3451CCFBD77A /* Journal */ = {
+			isa = PBXGroup;
+			children = (
+				0CE015459D9012AC01CCB817 /* CheckInView.swift */,
+				2087DBA256BFFEE06713F93D /* Editors.swift */,
+				94A35FC06520E46B3E0B1274 /* JournalView.swift */,
+			);
+			path = Journal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -212,18 +276,26 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D5E5812EDD0C4218CABDBA43 /* AssistantPreview.swift in Sources */,
-				C11D4B8799ABD494C1F90BA6 /* Editors.swift in Sources */,
+				9D9BBA82477A78A62E3E8CFC /* AssistantPreview.swift in Sources */,
+				3D93F1753929C346DC2881EE /* CheckIn.swift in Sources */,
+				2FD16E699C53DE49D376AAE6 /* CheckInView.swift in Sources */,
+				3D74D214CB3686FCADF7C2FA /* DiscoverView.swift in Sources */,
+				4322E19FD46674AFE347A37C /* Editors.swift in Sources */,
+				5143590FA51C5A4C25D3EA51 /* EntryValidation.swift in Sources */,
+				3157D1456611C3680162E340 /* GoalView.swift in Sources */,
 				01A20BFD238D2EFD9811910E /* Journal.swift in Sources */,
-				240FD6C26F4F534CA4D39A65 /* JournalView.swift in Sources */,
-				08EFBED2BDEEABEC08A909C9 /* MedicationCard.swift in Sources */,
+				5833A4D6715DD9868B0D6652 /* JournalView.swift in Sources */,
+				E13D4453B9589D60BEA30624 /* MedicationCard.swift in Sources */,
 				54A3F4BEE4EC1464A9F6E37B /* MedicationLevel.swift in Sources */,
-				CC616ED2F0448C9CBDB0E75D /* RootView.swift in Sources */,
+				119DCEA83562E277F719DB19 /* NotificationPreview.swift in Sources */,
+				3140DE520D3F985B4C17E938 /* RootView.swift in Sources */,
 				ADC60342778EA19EB546C959 /* StillApp.swift in Sources */,
 				8977D2CCBBFBC92F397AFA6C /* Store.swift in Sources */,
 				C58F3B5984579587CA3819F3 /* Tracking.swift in Sources */,
+				974312F3351A76E7FC00B72C /* TreatmentView.swift in Sources */,
 				590788E6635BD9FD18FF2A88 /* Vial.swift in Sources */,
-				96B081F9AB3851980DB28F40 /* VialViews.swift in Sources */,
+				A2684679232FBCDC19AB92D0 /* VialViews.swift in Sources */,
+				6F6D0EF2C198DA7ACE962775 /* WeightGoal.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

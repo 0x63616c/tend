@@ -7,20 +7,37 @@ struct WeightEditor: View {
     @State private var amount = ""
     @State private var date = Date()
     @State private var note = ""
+    @State private var unit: WeightUnit = .lb
+    @State private var localError: String?
+    var kilograms: Double? { parse(amount).map { unit.kilograms($0) } }
+    var valid: Bool { kilograms.map(EntryValidation.weight) ?? false }
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Weight") { TextField("Weight", text: $amount).keyboardType(.decimalPad).accessibilityIdentifier("weightAmount"); Text(store.journal.unit.rawValue).foregroundStyle(.secondary); DatePicker("Date", selection: $date) }
-                if date > Date() { Text("Future entry · excluded from your progress until this date.").font(.caption) }
-                Section("Notes") { TextField("How are you feeling?", text: $note, axis: .vertical).lineLimit(3...6) }
-            }.navigationTitle(entry == nil ? "Log weight" : "Edit weight").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") {
-                    guard let value = Double(amount.replacingOccurrences(of: ",", with: ".")) else { return }
-                    var updated = WeightEntry(date: date, kilograms: store.journal.unit.kilograms(value), note: note)
-                    if let entry { updated.id = entry.id }
-                    if store.save(weight: updated) { dismiss() }
-                }.disabled(Double(amount.replacingOccurrences(of: ",", with: ".")).map { !$0.isFinite || $0 <= 0 } ?? true) } }
-                .onAppear { if let entry { amount = number(store.journal.unit.display(entry.kilograms), digits: 2); date = entry.date; note = entry.note } }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(spacing: 18) {
+                        Image(systemName: "scalemass.fill").font(.title).foregroundStyle(Theme.aqua)
+                        TextField("0.0", text: $amount).keyboardType(.decimalPad).font(.system(size: 62, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Weight").accessibilityIdentifier("weightAmount")
+                        Picker("Weight unit", selection: $unit) { Text("Pounds").tag(WeightUnit.lb); Text("Kilograms").tag(WeightUnit.kg) }.pickerStyle(.segmented)
+                        if !amount.isEmpty && !valid { Text("Enter \(number(unit.display(20)))–\(number(unit.display(500))) \(unit.rawValue).").font(.caption).foregroundStyle(.orange) }
+                    }.card()
+                    VStack(alignment: .leading, spacing: 16) {
+                        DatePicker("Date", selection: $date)
+                        if date > Date() { Label("Future entry · excluded from current trends", systemImage: "calendar").font(.caption).foregroundStyle(.secondary) }
+                        DisclosureGroup("Note") { TextField("Add a note…", text: $note, axis: .vertical).lineLimit(2...5) }
+                    }.card()
+                    if let localError { Text(localError).font(.footnote).foregroundStyle(.red) }
+                    Button {
+                        guard let kilograms, valid else { return }
+                        var updated = WeightEntry(date: date, kilograms: kilograms, note: note)
+                        if let entry { updated.id = entry.id }
+                        if store.save(weight: updated) { dismiss() } else { localError = store.error; store.error = nil }
+                    } label: { Text("Save Weight").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 10) }.buttonStyle(.borderedProminent).disabled(!valid).accessibilityIdentifier("saveWeight")
+                }.padding(20)
+            }.background(Theme.background).navigationTitle(entry == nil ? "Add Weight" : "Edit Weight").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+                .onAppear { unit = store.journal.unit; if let entry { amount = number(unit.display(entry.kilograms), digits: 2); date = entry.date; note = entry.note } }
+                .onChange(of: unit) { old, new in if let value = parse(amount) { amount = number(new.display(old.kilograms(value)), digits: 2) } }
         }
     }
 }
@@ -67,8 +84,8 @@ struct DoseEditor: View {
                             }.padding(.vertical, 10)
                             if mode != "mg", let mg = milligrams { Text("\(number(mg, digits: 4)) mg · \(number((parse(amount) ?? 0) / (mode == "units" ? 100 : 1), digits: 4)) mL").font(.subheadline.weight(.medium)).foregroundStyle(.indigo) }
                             if mode == "units" {
-                                Toggle("My syringe is U-100", isOn: $confirmedU100).font(.subheadline)
-                                Text("100 units = 1 mL").font(.caption).foregroundStyle(.secondary)
+                                if store.journal.syringeUnitsPerML == 100 { Text("U-100 · 100 units = 1 mL").font(.caption).foregroundStyle(.secondary) }
+                                else { Toggle("My syringe is U-100", isOn: $confirmedU100).font(.subheadline); Text("100 units = 1 mL").font(.caption).foregroundStyle(.secondary) }
                             }
                             if mode != "mg" && concentration == nil { Text("Add a vial with its concentration to log in \(mode).").font(.subheadline).foregroundStyle(.orange) }
                         }.card()
@@ -85,12 +102,13 @@ struct DoseEditor: View {
                     }
                     VStack(alignment: .leading, spacing: 16) {
                         DatePicker(status == .planned ? "Planned for" : status == .skipped ? "Skipped date" : "Taken at", selection: $date)
-                        Divider()
-                        TextField("Add a note…", text: $note, axis: .vertical).lineLimit(2...5)
+                        DisclosureGroup("Note") { TextField("Add a note…", text: $note, axis: .vertical).lineLimit(2...5) }
                     }.card()
                     if let localError { Text(localError).font(.footnote).foregroundStyle(.red) }
-                    Button { save() } label: { Text(status == .skipped ? "Mark Skipped" : status == .planned ? "Save Plan" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 10) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose")
+                    
                 }.padding(20)
+            }.safeAreaInset(edge: .bottom) {
+                Button { save() } label: { Text(status == .skipped ? "Mark Skipped" : status == .planned ? "Save Plan" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose").padding(.horizontal, 20).padding(.vertical, 10).background(.bar)
             }.background(Theme.background).navigationTitle(entry == nil ? "Log Dose" : "Edit Dose").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
                 .sheet(isPresented: $addingVial) { VialEditor() }
@@ -128,16 +146,15 @@ struct ScheduleEditor: View {
             Form {
                 Section { ForEach(1...7, id: \.self) { day in
                     Button { if days.contains(day) { days.remove(day) } else { days.insert(day) } } label: {
-                        HStack { Text(Calendar.current.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(Theme.pine) } }
+                        HStack { Text(Calendar.current.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(.green) } }
                     }.accessibilityAddTraits(days.contains(day) ? .isSelected : [])
                 } } header: { Text("Days of the week") } footer: { Text("Choose the days in your prescribed schedule. Your actual dose dates can be logged separately.") }
-                Section("Reminders") { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute); Toggle("Remind me", isOn: $reminders) }
-                Section("Notification preview") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack { Image(systemName: "cross.case.fill").foregroundStyle(.indigo); Text("TEND").font(.caption.weight(.semibold)); Spacer(); Text(time, format: .dateTime.hour().minute()).font(.caption).foregroundStyle(.secondary) }
-                        Text("Time for your check-in").font(.subheadline.weight(.semibold))
-                        Text("Open Tend to review your schedule and log your dose.").font(.subheadline).foregroundStyle(.secondary)
-                    }.padding(.vertical, 8)
+                Section("Reminders") { Toggle("Remind me", isOn: $reminders); if reminders { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute) } }
+                if reminders {
+                    Section {
+                        NotificationPreview(time: time)
+                            .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
+                    } header: { Text("Notification preview") }
                 }
             }.navigationTitle("Your schedule").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") {

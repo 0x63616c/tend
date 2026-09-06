@@ -7,11 +7,11 @@ struct RootView: View {
     var body: some View {
         @Bindable var store = store
         TabView(selection: $selected) {
-            TodayView().tag(0).tabItem { Label("Summary", systemImage: "heart.fill") }
-            ProgressViewScreen().tag(1).tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }
-            JournalView().tag(2).tabItem { Label("Journal", systemImage: "book.closed") }
-            AssistantPreview().tag(3).tabItem { Label("Assistant", systemImage: "sparkles") }
-            SettingsView().tag(4).tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+            TodayView().tag(0).tabItem { Label("Home", systemImage: "square.grid.2x2.fill") }
+            TreatmentView().tag(1).tabItem { Label("Treatment", systemImage: "syringe.fill") }
+            ProgressViewScreen().tag(2).tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }
+            JournalView().tag(3).tabItem { Label("Journal", systemImage: "book.closed") }
+            DiscoverView().tag(4).tabItem { Label("Discover", systemImage: "safari") }
         }
         .alert("Something needs attention", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK") { store.error = nil }
@@ -26,31 +26,36 @@ struct TodayView: View {
     @State private var weightSheet = false
     @State private var doseSheet = false
     @State private var scheduleSheet = false
+    @State private var settingsSheet = false
+    @State private var weightDetail = false
+    @State private var vialSheet = false
     var summary: WeightSummary { WeightSummary(entries: store.journal.weights, now: Date()) }
     var overdue: Date? { store.journal.schedule.outstanding(asOf: Date(), doses: store.journal.doses).first }
     var nextDate: Date? { overdue ?? store.journal.schedule.occurrences(after: Date(), count: 1).first }
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text(Date(), format: .dateTime.weekday(.wide).month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary)
                         Spacer()
-                        if store.demo { Text("DEMO").font(.system(size: 10, weight: .bold)).tracking(1).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.vertical, 4).background(.quaternary, in: Capsule()) }
+                        
                     }
                     HStack(spacing: 12) {
-                        Image(systemName: overdue == nil ? "syringe.fill" : "clock.badge.exclamationmark").font(.title3).foregroundStyle(overdue == nil ? .blue : .orange).frame(width: 42, height: 42).background((overdue == nil ? Color.blue : Color.orange).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(overdue == nil ? "Next dose" : "Dose overdue").font(.subheadline.weight(.semibold))
-                            if let nextDate { Text(nextDate, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) }
-                        }
-                        Spacer()
-                        Button("Log") { doseSheet = true }.font(.subheadline.weight(.semibold)).buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("logDose")
-                    }.card()
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
+                            if let nextDate { Text(nextDate, format: .dateTime.weekday(.wide)).font(.title3.weight(.semibold)); Text(nextDate, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) }
+                            Button { doseSheet = true } label: { Label("Log dose", systemImage: "plus").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 3) }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("logDose")
+                        }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 132).card()
+                        Button { vialSheet = true } label: {
+                            if let vial = store.journal.vials.sorted(by: { $0.received > $1.received }).first { VialMini(vial: vial) }
+                            else { VStack(spacing: 12) { Image(systemName: "plus").font(.title2); Text("Add vial").font(.caption.weight(.semibold)) }.frame(width: 82, height: 132).card() }
+                        }.buttonStyle(.plain).accessibilityLabel("Vial details")
+                    }
                     MedicationCard()
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Label("Weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(.teal)
+                            Label("Weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.aqua)
                             Spacer()
                             Button { weightSheet = true } label: { Image(systemName: "plus.circle.fill").font(.title3) }.accessibilityLabel("Add Weight").accessibilityIdentifier("logWeight")
                         }
@@ -70,14 +75,18 @@ struct TodayView: View {
                             Spacer(); Divider().frame(height: 32); Spacer()
                             stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.rawValue)
                         }
-                    }.card()
-                    if let vial = store.journal.vials.sorted(by: { $0.received > $1.received }).first { VialSummary(vial: vial) }
+                    }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle()).onTapGesture { weightDetail = true }
+                    CheckInCard()
+
                 }.padding(.horizontal, 16).padding(.bottom, 24)
-            }.background(Theme.background).navigationTitle("Tend")
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { scheduleSheet = true } label: { Image(systemName: "calendar") }.accessibilityLabel("Edit schedule") } }
+            }.background(Theme.background).navigationTitle("Tend").navigationBarTitleDisplayMode(.large)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { settingsSheet = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Settings") } }
                 .sheet(isPresented: $weightSheet) { WeightEditor() }
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
                 .sheet(isPresented: $scheduleSheet) { ScheduleEditor() }
+                .sheet(isPresented: $settingsSheet) { SettingsView() }
+                .sheet(isPresented: $weightDetail) { ProgressViewScreen() }
+                .sheet(isPresented: $vialSheet) { VialEditor(vial: store.journal.vials.sorted { $0.received > $1.received }.first) }
         }
     }
     func stat(title: String, value: String, suffix: String) -> some View {
@@ -91,6 +100,7 @@ struct TodayView: View {
 struct WeightChart: View {
     var entries: [WeightEntry]
     var unit: WeightUnit
+    @State private var selected: Date?
     var compact = false
     var sorted: [WeightEntry] { entries.sorted { $0.date < $1.date } }
     var bounds: ClosedRange<Double> {
@@ -98,12 +108,17 @@ struct WeightChart: View {
         return ((values.min() ?? 0) - 1)...((values.max() ?? 1) + 1)
     }
     var body: some View {
-        Chart(sorted) { entry in
+        Chart {
+            ForEach(sorted) { entry in
             AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
-                .foregroundStyle(LinearGradient(colors: [Theme.pine.opacity(0.18), Theme.pine.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.monotone)
-            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.pine).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
-            if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.pine).symbolSize(45) }
-        }.chartYScale(domain: bounds)
+                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.monotone)
+            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
+            if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(45) }
+            }
+            if let selected, let nearest = sorted.min(by: { abs($0.date.timeIntervalSince(selected)) < abs($1.date.timeIntervalSince(selected)) }) {
+                RuleMark(x: .value("Selected", nearest.date)).foregroundStyle(.secondary.opacity(0.4)).annotation(position: .top) { Text("\(number(unit.display(nearest.kilograms))) \(unit.rawValue)").font(.caption.bold()).padding(5).background(Theme.card, in: Capsule()) }
+            }
+        }.chartXSelection(value: $selected).chartYScale(domain: bounds)
             .chartXAxis { if !compact { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } } }
             .chartYAxis { if !compact { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.12)); AxisValueLabel() } } }
             .accessibilityLabel("Weight history in \(unit.rawValue)")
@@ -120,6 +135,8 @@ struct ProgressViewScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    GoalCard()
+                    CheckInTrends()
                     Text("Weight").font(.title.bold())
                     Picker("Date range", selection: $range) { Text("Month").tag(30); Text("3 months").tag(90); Text("Year").tag(365); Text("All").tag(0) }.pickerStyle(.segmented)
                     VStack(alignment: .leading, spacing: 20) {

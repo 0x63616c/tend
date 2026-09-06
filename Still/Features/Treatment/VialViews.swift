@@ -58,7 +58,26 @@ struct VialEditor: View {
         }
     }
 }
-func parse(_ string: String) -> Double? {
-    let formatter = NumberFormatter(); formatter.locale = .current; formatter.numberStyle = .decimal
-    return formatter.number(from: string)?.doubleValue
+func parse(_ string: String) -> Double? { EntryValidation.number(string) }
+
+struct VialMini: View {
+    @Environment(Store.self) private var store
+    var vial: Vial
+    var remaining: Double { max(0, vial.volumeML - store.journal.doses.filter { $0.vialID == vial.id && $0.status == .taken && $0.date <= Date() }.reduce(0) { $0 + $1.milligrams / ($1.concentration ?? vial.concentration) }) }
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("VIAL").font(.system(size: 9, weight: .bold)).tracking(1.4).foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 3).fill(.secondary.opacity(0.45)).frame(width: 24, height: 7)
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 8).fill(Theme.aqua.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 7).fill(LinearGradient(colors: [Theme.aqua.opacity(0.4), Theme.aqua.opacity(0.85)], startPoint: .top, endPoint: .bottom)).frame(height: 51 * min(1, remaining / vial.volumeML))
+                    VStack(spacing: 8) { ForEach(0..<4) { _ in Rectangle().fill(.white.opacity(0.35)).frame(width: 8, height: 1).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 5) } }
+                }.frame(width: 34, height: 54).overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.aqua.opacity(0.35), lineWidth: 1))
+            }
+            Text("\(number(remaining, digits: 2)) mL").font(.system(.subheadline, design: .rounded, weight: .semibold))
+            Text("of \(number(vial.volumeML)) mL").font(.caption2).foregroundStyle(.secondary)
+        }.frame(width: 82, height: 132).card()
+        .accessibilityElement(children: .combine)
+    }
 }
