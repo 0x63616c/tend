@@ -105,7 +105,7 @@ struct DoseEditor: View {
                         DisclosureGroup("Note") { TextField("Add a note…", text: $note, axis: .vertical).lineLimit(2...5) }
                     }.card()
                     if let localError { Text(localError).font(.footnote).foregroundStyle(.red) }
-                    
+
                 }.padding(20)
             }.safeAreaInset(edge: .bottom) {
                 Button { save() } label: { Text(status == .skipped ? "Mark Skipped" : status == .planned ? "Save Plan" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose").padding(.horizontal, 20).padding(.vertical, 10).background(.bar)

@@ -39,7 +39,7 @@ struct TodayView: View {
                     HStack {
                         Text(Date(), format: .dateTime.weekday(.wide).month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary)
                         Spacer()
-                        
+
                     }
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
