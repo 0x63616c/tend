@@ -17,7 +17,7 @@ final class StillUITests: XCTestCase {
         app.tabBars.buttons["Journal"].tap()
         capture("Journal")
         app.tabBars.buttons["Discover"].tap()
-        XCTAssertTrue(app.staticTexts["A little inspiration for your everyday."].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["READ. COOK. RESET."].waitForExistence(timeout: 3))
         capture("Discover")
         app.buttons["Recipes"].tap()
         app.staticTexts["The five-minute\nyogurt bowl"].tap()
