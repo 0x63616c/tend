@@ -16,3 +16,11 @@ The Discover walkthrough passed (one test, zero failures; `build/DiscoverQA.xcre
 - Actual notification delivery and permission-denial handling.
 - Accessibility, larger text, light/dark visual review and final screenshot curation.
 - Signing, archive, App Store Connect upload and verified TestFlight availability.
+
+## Dose unit switching regression
+
+The simulator test `testChangingDoseUnitsPreservesTheDose` reproduced two failures: entering 3 U-100 units and selecting mg or mL kept the literal number 3. The selector now converts through the dose's concentration and preserves its amount (3 units = 0.15 mg = 0.03 mL at 5 mg/mL). If required conversion information is absent, it clears the input instead of reinterpreting it.
+
+Xcode 26.2's Swift 6.2.3 compiler crashed in IR generation with a direct method reference used as the binding setter. An explicit closure compiles successfully. The same UI regression test is retained to verify the behaviour.
+
+Verification: targeted UI test passed with zero failures in `Test-Still-2026.09.05_20-26-19--0700.xcresult`; `swift test` also passed after the change.

@@ -77,7 +77,7 @@ struct DoseEditor: View {
                     Picker("Status", selection: $status) { ForEach(DoseEntry.Status.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) } }.pickerStyle(.segmented)
                     if status != .skipped {
                         VStack(spacing: 16) {
-                            Picker("Input unit", selection: $mode) { Text("mg").tag("mg"); Text("mL").tag("mL"); Text("Units").tag("units") }.pickerStyle(.segmented)
+                            Picker("Input unit", selection: Binding(get: { mode }, set: { changeMode($0) })) { Text("mg").tag("mg"); Text("mL").tag("mL"); Text("Units").tag("units") }.pickerStyle(.segmented)
                             HStack(alignment: .firstTextBaseline) {
                                 TextField("0", text: $amount).keyboardType(.decimalPad).font(.system(size: 54, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Dose amount").accessibilityIdentifier("doseAmount")
                                 Text(mode).font(.title3).foregroundStyle(.secondary)
@@ -122,6 +122,22 @@ struct DoseEditor: View {
                     } else { vialID = store.journal.vials.sorted { $0.received > $1.received }.first?.id; mode = confirmedU100 && vialID != nil ? "units" : "mg" }
                 }
         }
+    }
+    func changeMode(_ newMode: String) {
+        let original = milligrams
+        mode = newMode
+        guard let original else { amount = ""; return }
+        let converted: Double
+        switch newMode {
+        case "mL":
+            guard let concentration, concentration > 0 else { amount = ""; return }
+            converted = original / concentration
+        case "units":
+            guard confirmedU100, let concentration, concentration > 0 else { amount = ""; return }
+            converted = original / concentration * 100
+        default: converted = original
+        }
+        amount = converted.formatted(.number.grouping(.never).precision(.fractionLength(0...8)))
     }
     func save() {
         guard let mg = milligrams else { return }

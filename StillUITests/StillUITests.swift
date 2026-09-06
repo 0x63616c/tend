@@ -25,6 +25,22 @@ final class StillUITests: XCTestCase {
         capture("Recipe")
         app.tabBars.buttons["Home"].tap()
     }
+    @MainActor func testChangingDoseUnitsPreservesTheDose() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        app.buttons["logDose"].tap()
+        let field = app.textFields["doseAmount"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("3")
+        app.segmentedControls.buttons["mg"].tap()
+        XCTAssertEqual(field.value as? String, "0.15")
+        app.segmentedControls.buttons["mL"].tap()
+        XCTAssertEqual(field.value as? String, "0.03")
+        app.segmentedControls.buttons["Units"].tap()
+        XCTAssertEqual(field.value as? String, "3")
+    }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways
