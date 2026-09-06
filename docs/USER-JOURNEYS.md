@@ -21,7 +21,7 @@ Tap either dashboard graph for details and scrub individual dates. Medication hi
 Choose appetite and/or nausea using five circles. Appetite endpoints: 1 not hungry, 5 very hungry. Nausea endpoints: 1 none, 5 severe. Nothing preselected; either is optional. Add a date/note, save, then inspect/edit the record or view trends. These are personal ratings, not diagnoses.
 
 ## 7. Start a new vial
-Add a new vial from Settings or dose entry. Preserve prior vial records and dose concentration snapshots. Estimated volume remaining subtracts only taken doses linked to that vial. Plans/skips do not consume it. Editing a dose recalculates balance.
+Add a new vial from Treatment or dose entry. Preserve prior vial records and dose concentration snapshots. Estimated volume remaining subtracts only taken doses linked to that vial. Plans/skips do not consume it. Editing a dose recalculates balance.
 
 ## 8. Correct history
 Open the journal, filter and select a record, edit and save. Confirm deletion before removing a record. Never silently lose data on a read/write error. No synthetic data is written into a real journal.

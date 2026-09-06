@@ -2,20 +2,20 @@
 
 ## Core
 
-`swift test` passes 11 tests after the journal compatibility change. The new compatibility test failed on the older minimal journal fixture before implementation, then passed after default decoding was added. It also rejects an unknown future schema version. This verifies decoding, not the UI recovery experience.
+`swift test` passes 12 tests after the journal compatibility change. The new compatibility test failed on the older minimal journal fixture before implementation, then passed after default decoding was added. It also rejects an unknown future schema version. This verifies decoding, not the UI recovery experience.
 
 Covered: weight chronology and future filtering, future taken-dose rejection, local weekday scheduling across daylight saving, journal round-trip and historical medication snapshots, overdue resolution, explicit syringe scale conversion, half-life arithmetic, decimal entry validation, goal pace and check-in rating bounds.
 
 ## UI
 
-The Discover walkthrough passed (one test, zero failures; `build/DiscoverQA.xcresult`) on a separate iPhone 17 Pro Max simulator. It exercises navigation, dose sheet presentation, Progress, Journal, Discover filtering and opening a recipe. This is not yet a complete create/edit/relaunch regression suite.
+The Discover walkthrough passed (one test, zero failures; `build/DiscoverQA.xcresult`) on a separate iPhone 17 Pro Max simulator. It exercises navigation, dose sheet presentation, Progress, Journal, Discover filtering and opening a recipe. Further persistence and regression tests are recorded below.
 
-## Remaining release checks
+## Coverage limits and remaining release work
 
-- Full record create/edit/relaunch journeys and recovery after unreadable storage.
-- Actual notification delivery and permission-denial handling.
-- Accessibility, larger text, light/dark visual review and final screenshot curation.
-- Signing, archive, App Store Connect upload and verified TestFlight availability.
+- Recovery after unreadable storage has not been exercised through the UI.
+- One-shot notification delivery is verified; permission denial and weekly recurrence need additional device coverage.
+- Dark and light Home have been visually inspected. Larger accessibility text still needs a complete walkthrough.
+- Signing, archive and upload succeeded. Build 3 is Ready to Test; group assignment and tester availability remain to be verified.
 
 ## Dose unit switching regression
 

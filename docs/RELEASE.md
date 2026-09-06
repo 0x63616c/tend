@@ -2,10 +2,10 @@
 
 App Store Connect app: Tend: Dose & Weight Journal, Apple ID `6809098849`.
 Bundle identifier: `com.calumwebb.still` (the original internal project name).
-Version/build: `1.0.0 (1)`.
+Current candidate: **1.0.0 (3)**, source commit `08061f4`.
 
-The candidate archive at `build/TendCandidate.xcarchive` includes the flat Discover design and the tested dose unit-switching correction at commit `74ac4ed`. Signing and archive succeeded. Apple accepted the upload on September 5, 2026 at 20:31 Pacific and reported that processing had begun. Tester availability still needs verification. Build 1 should not be enabled for testers: a subsequently reproduced kilogram-editor initialization bug is being corrected in build 2. Do not equate the public repository, archive or export with a TestFlight release.
+Build 3 was archived at `build/TendBuild3.xcarchive` and uploaded successfully on September 5, 2026 at 20:50 Pacific. App Store Connect subsequently reported **Ready to Test**. Owner Preview has one tester, the account holder. Assignment of build 3 to that group still requires completion; upload and processing alone do not prove tester availability.
 
-The application has no backend. The assistant is explicitly a preview. Before broad beta distribution, complete the open checks in `TESTING.md`, including actual notification delivery and complete record create/edit/relaunch flows.
+Build 1 must not be distributed: it predates the kilogram editor regression fix. Build 2 includes both unit-conversion fixes but is superseded by build 3, which also contains the real notification preview, empty initial schedule and graph detail close control. Automatic distribution is disabled.
 
-Build 2 is archived at `build/TendBuild2.xcarchive` from commit `aaeb78c`, including both passing UI regression fixes. Its App Store Connect upload has been started. Build 1 remains unsuitable for tester distribution because of the kilogram editor issue.
+The application has no backend. The assistant is explicitly a coming-soon preview. See TESTING.md for completed verification and remaining coverage limits.
