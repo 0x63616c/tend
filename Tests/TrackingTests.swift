@@ -1,0 +1,79 @@
+import XCTest
+@testable import StillCore
+
+final class TrackingTests: XCTestCase {
+    func testWeightSummaryUsesChronologyAndExcludesFutureMeasurements() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let summary = WeightSummary(entries: [
+            WeightEntry(date: start.addingTimeInterval(14 * 86400), kilograms: 98),
+            WeightEntry(date: start, kilograms: 100),
+            WeightEntry(date: start.addingTimeInterval(30 * 86400), kilograms: 80)
+        ], now: start.addingTimeInterval(15 * 86400))
+        XCTAssertEqual(summary.latest, 98)
+        XCTAssertEqual(summary.lost, 2)
+        XCTAssertEqual(summary.weeklyChange, -1)
+    }
+    func testDoseRejectsFutureTakenAndInvalidAmountsButAcceptsPlans() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var dose = DoseEntry(date: now.addingTimeInterval(3600), medication: "Semaglutide", milligrams: 0.5)
+        XCTAssertThrowsError(try dose.validate(now: now))
+        dose.status = .planned
+        XCTAssertNoThrow(try dose.validate(now: now))
+        dose.milligrams = -1
+        XCTAssertThrowsError(try dose.validate(now: now))
+    }
+    func testTwiceWeeklyScheduleKeepsLocalTimeAcrossDaylightSaving() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 3, day: 6, hour: 12))!
+        var schedule = DoseSchedule()
+        schedule.weekdays = [1, 4]
+        let dates = schedule.occurrences(after: start, count: 3, calendar: calendar)
+        XCTAssertEqual(dates.map { calendar.component(.day, from: $0) }, [8, 11, 15])
+        XCTAssertEqual(dates.map { calendar.component(.hour, from: $0) }, [9, 9, 9])
+    }
+    func testJournalPersistsEditsAndPreservesMedicationHistory() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = JournalFile(url: directory.appendingPathComponent("journal.json"))
+        var journal = Journal()
+        journal.doses = [DoseEntry(date: Date(timeIntervalSince1970: 1700000000), medication: "Semaglutide", milligrams: 0.5, concentration: 5, note: "A quiet morning")]
+        try file.save(journal)
+        var edited = try file.load()
+        XCTAssertEqual(edited, journal)
+        guard !edited.doses.isEmpty else { return }
+        edited.medication = "Tirzepatide"
+        edited.doses[0].note = "Updated note"
+        try file.save(edited)
+        let reloaded = try file.load()
+        XCTAssertEqual(reloaded.doses[0].medication, "Semaglutide")
+        XCTAssertEqual(reloaded.doses[0].note, "Updated note")
+    }
+    func testOverdueRemainsUntilExplicitlyLoggedOrSkippedWithoutMovingSchedule() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday = cal.date(from: DateComponents(year: 2026, month: 9, day: 7, hour: 9))!
+        var schedule = DoseSchedule(); schedule.weekdays = [2, 5]; schedule.startDate = monday
+        let tuesday = monday.addingTimeInterval(86400)
+        XCTAssertEqual(schedule.outstanding(asOf: tuesday, doses: [], calendar: cal), [monday])
+        let late = DoseEntry(date: tuesday, scheduledDate: monday, medication: "Semaglutide", milligrams: 0.5)
+        XCTAssertEqual(schedule.outstanding(asOf: tuesday, doses: [late], calendar: cal), [])
+        XCTAssertEqual(cal.component(.weekday, from: schedule.occurrences(after: tuesday, count: 1, calendar: cal)[0]), 5)
+    }
+    func testSyringeUnitsRequireScaleAndConvertUsingVialConcentration() throws {
+        let vial = Vial(received: Date(), medication: "Semaglutide", concentration: 5, volumeML: 2)
+        XCTAssertEqual(vial.totalMilligrams, 10)
+        XCTAssertEqual(try vial.milligrams(units: 3, unitsPerML: 100), 0.15, accuracy: 0.000001)
+        XCTAssertThrowsError(try vial.milligrams(units: 3, unitsPerML: 0))
+        XCTAssertThrowsError(try vial.milligrams(units: -3, unitsPerML: 100))
+    }
+    func testHalfLifeModelAddsOnlyMatchingTakenDosesAndExplicitFuturePlans() {
+        let start = Date(timeIntervalSince1970: 1700000000)
+        let doses = [DoseEntry(date: start, medication: "Semaglutide", milligrams: 1),
+            DoseEntry(date: start, medication: "Tirzepatide", milligrams: 5),
+            DoseEntry(date: start.addingTimeInterval(7 * 86400), medication: "Semaglutide", milligrams: 1, status: .planned)]
+        let week = start.addingTimeInterval(7 * 86400)
+        XCTAssertEqual(MedicationLevel.remaining(at: week, doses: doses, medication: "Semaglutide", halfLifeDays: 7, now: start), 0.5, accuracy: 0.000001)
+        XCTAssertEqual(MedicationLevel.remaining(at: week, doses: doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: start), 1.5, accuracy: 0.000001)
+        XCTAssertEqual(MedicationLevel.remaining(at: start.addingTimeInterval(-1), doses: doses, medication: "Semaglutide", halfLifeDays: 7, now: start), 0)
+    }
+}
