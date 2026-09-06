@@ -41,6 +41,18 @@ final class StillUITests: XCTestCase {
         app.segmentedControls.buttons["Units"].tap()
         XCTAssertEqual(field.value as? String, "3")
     }
+    @MainActor func testReopeningKilogramWeightDoesNotConvertItAgain() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        app.buttons["Settings"].tap()
+        app.buttons["Weight unit, lb"].tap()
+        app.buttons["kg"].tap()
+        app.buttons["Done"].tap()
+        app.tabBars.buttons["Journal"].tap()
+        app.staticTexts["88.5 kg"].tap()
+        XCTAssertEqual(app.textFields["weightAmount"].value as? String, "88.5")
+    }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways

@@ -18,7 +18,10 @@ struct WeightEditor: View {
                     VStack(spacing: 18) {
                         Image(systemName: "scalemass.fill").font(.title).foregroundStyle(Theme.aqua)
                         TextField("0.0", text: $amount).keyboardType(.decimalPad).font(.system(size: 62, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Weight").accessibilityIdentifier("weightAmount")
-                        Picker("Weight unit", selection: $unit) { Text("Pounds").tag(WeightUnit.lb); Text("Kilograms").tag(WeightUnit.kg) }.pickerStyle(.segmented)
+                        Picker("Weight unit", selection: Binding(get: { unit }, set: { newUnit in
+                            if let kilograms { amount = newUnit.display(kilograms).formatted(.number.grouping(.never).precision(.fractionLength(0...8))) }
+                            unit = newUnit
+                        })) { Text("Pounds").tag(WeightUnit.lb); Text("Kilograms").tag(WeightUnit.kg) }.pickerStyle(.segmented)
                         if !amount.isEmpty && !valid { Text("Enter \(number(unit.display(20)))–\(number(unit.display(500))) \(unit.rawValue).").font(.caption).foregroundStyle(.orange) }
                     }.card()
                     VStack(alignment: .leading, spacing: 16) {
@@ -36,8 +39,7 @@ struct WeightEditor: View {
                 }.padding(20)
             }.background(Theme.background).navigationTitle(entry == nil ? "Add Weight" : "Edit Weight").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-                .onAppear { unit = store.journal.unit; if let entry { amount = number(unit.display(entry.kilograms), digits: 2); date = entry.date; note = entry.note } }
-                .onChange(of: unit) { old, new in if let value = parse(amount) { amount = number(new.display(old.kilograms(value)), digits: 2) } }
+                .onAppear { unit = store.journal.unit; if let entry { amount = unit.display(entry.kilograms).formatted(.number.grouping(.never).precision(.fractionLength(0...8))); date = entry.date; note = entry.note } }
         }
     }
 }

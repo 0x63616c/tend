@@ -24,3 +24,9 @@ The simulator test `testChangingDoseUnitsPreservesTheDose` reproduced two failur
 Xcode 26.2's Swift 6.2.3 compiler crashed in IR generation with a direct method reference used as the binding setter. An explicit closure compiles successfully. The same UI regression test is retained to verify the behaviour.
 
 Verification: targeted UI test passed with zero failures in `Test-Still-2026.09.05_20-26-19--0700.xcresult`; `swift test` also passed after the change.
+
+## Kilogram editor regression
+
+After selecting kilograms in Settings, reopening the synthetic 88.5 kg journal entry displayed 40.14 kg. The UI test reproduced this exact mismatch. Initialization was triggering the unit-change observer and converting the loaded value twice. Conversion now occurs only through the unit picker's user-driven setter; loading an entry preserves its recorded amount. Editable weight values omit grouping separators and retain up to eight decimal places.
+
+Verification: the kilogram UI regression passed in `Test-Still-2026.09.05_20-32-11--0700.xcresult`.
