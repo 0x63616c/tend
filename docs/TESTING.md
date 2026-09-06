@@ -15,7 +15,7 @@ The Discover walkthrough passed (one test, zero failures; `build/DiscoverQA.xcre
 - Recovery after unreadable storage has not been exercised through the UI.
 - One-shot notification delivery is verified; permission denial and weekly recurrence need additional device coverage.
 - Dark and light Home have been visually inspected. Larger accessibility text still needs a complete walkthrough.
-- Signing, archive and upload succeeded. Build 3 is assigned to Owner Preview and marked Testing. The tester row reports No Builds Available; actual TestFlight installation remains to be verified.
+- Signing, archive and upload succeeded. Build 3 is assigned to Owner Preview and marked Testing. The account-holder tester subsequently changed to Invited, confirming the owner preview invitation. Physical-device installation has not been observed.
 
 ## Dose unit switching regression
 

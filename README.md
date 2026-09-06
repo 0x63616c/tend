@@ -2,7 +2,7 @@
 
 A native, local-first iPhone journal for GLP-1 treatment. Built with SwiftUI and Swift Charts, with no sign-in, tracking SDKs or runtime dependencies.
 
-**Beta in preparation. Builds have been uploaded to Apple; tester availability is still being verified.**
+**Private TestFlight beta: version 1.0.0 (3) is Testing in Owner Preview, with the account holder Invited.**
 
 Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; review progress and estimated medication decay; record appetite and nausea; and choose weekly reminder days. Edit past records and distinguish future plans from actual entries. Discover includes bundled original articles and recipes. The assistant is a coming-soon preview, not a connected AI service.
 
