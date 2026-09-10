@@ -13,4 +13,4 @@ Validation: existing preview/navigation/logging UI test passed; targeted filter 
 
 Screenshots use synthetic data: [Home](screenshots/polish-home-dark.png), [collapsed Home](screenshots/polish-home-collapsed-dark.png), [Journal](screenshots/polish-journal-dark.png), [Treatment](screenshots/polish-treatment-dark.png), [Progress](screenshots/polish-progress-dark.png).
 
-Distribution verification pending.
+Verified in App Store Connect: upload complete, build 1.0.0 (5) Testing in Owner Preview (1 tester, 3 builds), expires in 90 days. What to Test notes saved. App Store Connect name saved as Tendr: Dose & Weight Journal. Upload succeeded September 10 at 12:16 Pacific. Physical build 5 installation is not verified.

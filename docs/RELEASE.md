@@ -1,3 +1,7 @@
+# Latest release: Tendr 1.0.0 (5)
+
+September 10, 2026: build 5 uploaded successfully and verified Testing in the existing Owner Preview internal group. App name updated to Tendr: Dose & Weight Journal. See [build 5 notes](BUILD-5.md). Existing testers can update without another invitation. Physical build 5 installation is not verified.
+
 # Release state
 
 App: Tend: Dose & Weight Journal, Apple ID `6809098849`.
