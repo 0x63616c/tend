@@ -43,7 +43,7 @@ import UserNotifications
     @discardableResult func delete(weight: WeightEntry) -> Bool { var next = journal; next.weights.removeAll { $0.id == weight.id }; return commit(next) }
     @discardableResult func delete(dose: DoseEntry) -> Bool { var next = journal; next.doses.removeAll { $0.id == dose.id }; return commit(next) }
     static let reminderTitle = "Time for your check-in"
-    static let reminderBody = "Open Tend to review your schedule and log your dose."
+    static let reminderBody = "Open Tendr to review your schedule and log your dose."
     func sendTestReminder() async -> String {
         let center = UNUserNotificationCenter.current()
         do {
@@ -55,7 +55,7 @@ import UserNotifications
             content.body = Self.reminderBody
             content.sound = .default
             try await center.add(UNNotificationRequest(identifier: "tend-preview", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)))
-            return "Leave Tend to see it in 5 seconds."
+            return "Leave Tendr to see it in 5 seconds."
         } catch { return "Could not send a test notification. Try again." }
     }
     func syncReminders() async {

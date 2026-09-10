@@ -21,3 +21,27 @@ extension View {
     func card() -> some View { padding(20).background(Theme.card, in: RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(.primary.opacity(0.035), lineWidth: 1)) }
 }
 func number(_ value: Double, digits: Int = 1) -> String { value.formatted(.number.precision(.fractionLength(0...digits))) }
+
+struct FilterBar<Value: Hashable>: View {
+    @Binding var selection: Value
+    var options: [(Value, String)]
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            buttons
+            ScrollView(.horizontal, showsIndicators: false) { buttons }
+        }
+    }
+    private var buttons: some View {
+        HStack(spacing: 6) {
+            ForEach(options, id: \.0) { value, title in
+                Button { selection = value } label: {
+                    Text(title).font(.subheadline.weight(.semibold)).fixedSize()
+                        .padding(.horizontal, 15).frame(minHeight: 44)
+                        .foregroundStyle(selection == value ? Theme.background : Color.primary)
+                        .background(selection == value ? Theme.pine : Theme.card, in: Capsule())
+                }.buttonStyle(.plain)
+                    .accessibilityAddTraits(selection == value ? .isSelected : [])
+            }
+        }
+    }
+}

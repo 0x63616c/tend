@@ -19,6 +19,6 @@ struct NotificationPreview: View {
         }.padding(14).frame(height: 238)
             .background(Color(white: 0.035)).clipShape(RoundedRectangle(cornerRadius: 26))
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Notification preview. Time for your check-in. Open Tend to review your schedule and log your dose.")
+            .accessibilityLabel("Notification preview. Time for your check-in. Open Tendr to review your schedule and log your dose.")
     }
 }

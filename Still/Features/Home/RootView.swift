@@ -36,11 +36,6 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text(Date(), format: .dateTime.weekday(.wide).month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary)
-                        Spacer()
-
-                    }
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
@@ -79,7 +74,7 @@ struct TodayView: View {
                     CheckInCard()
 
                 }.padding(.horizontal, 16).padding(.bottom, 24)
-            }.background(Theme.background).navigationTitle("Tend").navigationBarTitleDisplayMode(.large)
+            }.background(Theme.background).navigationTitle("Tendr").navigationBarTitleDisplayMode(.large)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { settingsSheet = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Settings") } }
                 .sheet(isPresented: $weightSheet) { WeightEditor() }
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
@@ -141,7 +136,7 @@ struct ProgressViewScreen: View {
                     GoalCard()
                     CheckInTrends()
                     Text("Weight").font(.title.bold())
-                    Picker("Date range", selection: $range) { Text("Month").tag(30); Text("3 months").tag(90); Text("Year").tag(365); Text("All").tag(0) }.pickerStyle(.segmented)
+                    FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year"), (0, "All")])
                     VStack(alignment: .leading, spacing: 20) {
                         Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
                         if let latest = summary.latest {

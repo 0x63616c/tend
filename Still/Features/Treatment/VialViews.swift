@@ -7,10 +7,7 @@ struct VialSummary: View {
     var remaining: Double { max(0, vial.volumeML - used) }
     var body: some View {
         HStack(spacing: 16) {
-            ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 6).fill(.blue.opacity(0.08))
-                RoundedRectangle(cornerRadius: 5).fill(.blue.opacity(0.5)).frame(height: 40 * max(0, min(1, remaining / vial.volumeML)))
-            }.frame(width: 25, height: 44).overlay(RoundedRectangle(cornerRadius: 6).stroke(.blue.opacity(0.3), lineWidth: 1))
+            VialGlyph(fraction: remaining / vial.volumeML)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Current vial").font(.subheadline.weight(.semibold))
                 Text("\(number(remaining, digits: 2)) of \(number(vial.volumeML)) mL remaining").font(.caption).foregroundStyle(.secondary)
@@ -67,17 +64,25 @@ struct VialMini: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("VIAL").font(.system(size: 9, weight: .bold)).tracking(1.4).foregroundStyle(.secondary)
-            VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 3).fill(.secondary.opacity(0.45)).frame(width: 24, height: 7)
-                ZStack(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 8).fill(Theme.aqua.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 7).fill(LinearGradient(colors: [Theme.aqua.opacity(0.4), Theme.aqua.opacity(0.85)], startPoint: .top, endPoint: .bottom)).frame(height: 51 * min(1, remaining / vial.volumeML))
-                    VStack(spacing: 8) { ForEach(0..<4) { _ in Rectangle().fill(.white.opacity(0.35)).frame(width: 8, height: 1).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 5) } }
-                }.frame(width: 34, height: 54).overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.aqua.opacity(0.35), lineWidth: 1))
-            }
+            VialGlyph(fraction: remaining / vial.volumeML)
             Text("\(number(remaining, digits: 2)) mL").font(.system(.subheadline, design: .rounded, weight: .semibold))
             Text("of \(number(vial.volumeML)) mL").font(.caption2).foregroundStyle(.secondary)
         }.frame(width: 82, height: 132).card()
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct VialGlyph: View {
+    var fraction: Double
+    var body: some View {
+            VStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 3).fill(.secondary.opacity(0.45)).frame(width: 24, height: 7)
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 8).fill(Theme.aqua.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 7).fill(Theme.aqua.opacity(0.65)).frame(height: 51 * max(0, min(1, fraction)))
+                    VStack(spacing: 8) { ForEach(0..<4) { _ in Rectangle().fill(.white.opacity(0.35)).frame(width: 8, height: 1).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 5) } }
+                }.frame(width: 34, height: 54).overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.aqua.opacity(0.35), lineWidth: 1))
+            }
+        .accessibilityHidden(true)
     }
 }

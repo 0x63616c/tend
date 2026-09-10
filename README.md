@@ -1,4 +1,4 @@
-# Tend
+# Tendr
 
 A native, local-first iPhone journal for GLP-1 treatment. Built with SwiftUI and Swift Charts, with no sign-in, tracking SDKs or runtime dependencies.
 

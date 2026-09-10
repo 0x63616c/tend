@@ -25,6 +25,33 @@ final class StillUITests: XCTestCase {
         capture("Recipe")
         app.tabBars.buttons["Home"].tap()
     }
+    @MainActor func testPolishedFiltersAndVials() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 10))
+        capture("Polish Home")
+        app.swipeUp()
+        capture("Polish Home collapsed")
+        app.tabBars.buttons["Treatment"].tap()
+        capture("Polish Treatment")
+        app.tabBars.buttons["Journal"].tap()
+        app.buttons["Doses"].tap()
+        XCTAssertTrue(app.buttons["Doses"].isSelected)
+        XCTAssertFalse(app.staticTexts["Weight"].exists)
+        app.buttons["Weight"].tap()
+        XCTAssertTrue(app.buttons["Weight"].isSelected)
+        app.buttons["All"].tap()
+        XCTAssertTrue(app.buttons["All"].isSelected)
+        capture("Polish Journal")
+        app.tabBars.buttons["Progress"].tap()
+        if !app.buttons["Month"].isHittable { app.swipeUp() }
+        app.buttons["Month"].tap()
+        XCTAssertTrue(app.buttons["Month"].isSelected)
+        app.buttons["Year"].tap()
+        XCTAssertTrue(app.buttons["Year"].isSelected)
+        capture("Polish Progress")
+    }
     @MainActor func testChangingDoseUnitsPreservesTheDose() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]

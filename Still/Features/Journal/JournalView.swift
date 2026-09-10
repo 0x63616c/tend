@@ -24,8 +24,8 @@ struct JournalView: View {
         NavigationStack {
             List {
                 Section {
-                    Picker("Entries", selection: $filter) { ForEach(["All", "Doses", "Weight", "Check-ins"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented)
-                }.listRowBackground(Color.clear)
+                    FilterBar(selection: $filter, options: ["All", "Doses", "Weight", "Check-ins"].map { ($0, $0) })
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 ForEach(days, id: \.self) { day in
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(entries.filter { Calendar.current.isDate($0.date, inSameDayAs: day) }) { entry in
@@ -104,7 +104,7 @@ struct SettingsView: View {
                 }
                 Section {
                     NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
-                } footer: { Text("Tend · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
+                } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
             }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { dismiss() } }
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
                 .sheet(isPresented: $treatment) { TreatmentEditor() }
@@ -138,7 +138,7 @@ struct PrivacyView: View {
     var body: some View {
         List {
             Section("On this iPhone") { Text("No account, ads, analytics SDKs, or server. Your journal is stored locally. Device backups follow your iPhone settings.") }
-            Section("Your health") { Text("Tend is a journal, not a dosing guide. Medication graphs are simplified estimates, not measured levels. Follow your prescriber's instructions.") }
+            Section("Your health") { Text("Tendr is a journal, not a dosing guide. Medication graphs are simplified estimates, not measured levels. Follow your prescriber's instructions.") }
             Section("Assistant") { Text("The assistant is a coming-soon preview. No chat service is connected and no journal data is sent to AI.") }
         }.navigationTitle("Privacy & About").navigationBarTitleDisplayMode(.inline)
     }

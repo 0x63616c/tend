@@ -84,7 +84,7 @@ private struct ArticleView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("\(article.category) · \(article.duration)").font(.caption.weight(.semibold)).foregroundStyle(Theme.pine)
                     Text(article.title).font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
-                    Text("Tend editorial").font(.caption).foregroundStyle(.secondary)
+                    Text("Tendr editorial").font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(article.sections.indices, id: \.self) { index in
                     VStack(alignment: .leading, spacing: 12) {
