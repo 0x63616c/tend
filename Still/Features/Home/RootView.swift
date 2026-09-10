@@ -58,7 +58,7 @@ struct TodayView: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                                     Text(summary.latest.map { number(store.journal.unit.display($0)) } ?? "—").font(.system(size: 32, weight: .bold, design: .rounded))
-                                    Text(store.journal.unit.rawValue).font(.subheadline).foregroundStyle(.secondary)
+                                    Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
                                 }
                                 Text("Latest weight").font(.caption).foregroundStyle(.secondary)
                             }
@@ -66,9 +66,9 @@ struct TodayView: View {
                         }
                         Divider()
                         HStack {
-                            stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", suffix: store.journal.unit.rawValue)
+                            stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", suffix: store.journal.unit.symbol)
                             Spacer(); Divider().frame(height: 32); Spacer()
-                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.rawValue, alignment: .trailing)
+                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.symbol, alignment: .trailing)
                         }
                     }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle()).onTapGesture { weightDetail = true }
                     CheckInCard()
@@ -111,13 +111,13 @@ struct WeightChart: View {
             if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(45) }
             }
             if let selected, let nearest = sorted.min(by: { abs($0.date.timeIntervalSince(selected)) < abs($1.date.timeIntervalSince(selected)) }) {
-                RuleMark(x: .value("Selected", nearest.date)).foregroundStyle(.secondary.opacity(0.4)).annotation(position: .top) { Text("\(number(unit.display(nearest.kilograms))) \(unit.rawValue)").font(.caption.bold()).padding(5).background(Theme.card, in: Capsule()) }
+                RuleMark(x: .value("Selected", nearest.date)).foregroundStyle(.secondary.opacity(0.4)).annotation(position: .top) { Text("\(number(unit.display(nearest.kilograms))) \(unit.symbol)").font(.caption.bold()).padding(5).background(Theme.card, in: Capsule()) }
             }
         }.chartXSelection(value: $selected).chartYScale(domain: bounds)
             .chartXScale(range: .plotDimension(padding: compact ? 4 : 20))
             .chartXAxis { if !compact { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } } }
             .chartYAxis { if !compact { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.12)); AxisValueLabel() } } }
-            .accessibilityLabel("Weight history in \(unit.rawValue)")
+            .accessibilityLabel("Weight history in \(unit.symbol)")
     }
 }
 
@@ -140,13 +140,13 @@ struct ProgressViewScreen: View {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
                         if let latest = summary.latest {
-                            HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(latest))).font(.system(size: 52, weight: .medium, design: .rounded)); Text(store.journal.unit.rawValue).foregroundStyle(.secondary) }
+                            HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(latest))).font(.system(size: 52, weight: .medium, design: .rounded)); Text(store.journal.unit.symbol).foregroundStyle(.secondary) }
                             WeightChart(entries: entries, unit: store.journal.unit).frame(height: 220)
                         } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your trend.")) }
                     }.card()
                     HStack(spacing: 14) {
-                        metric(title: (summary.lost ?? 0) >= 0 ? "Weight lost" : "Weight gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", foot: store.journal.unit.rawValue, icon: "arrow.down.right")
-                        metric(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", foot: "\(store.journal.unit.rawValue) / week", icon: "waveform.path")
+                        metric(title: (summary.lost ?? 0) >= 0 ? "Weight lost" : "Weight gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", foot: store.journal.unit.symbol, icon: "arrow.down.right")
+                        metric(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", foot: "\(store.journal.unit.symbol) / week", icon: "waveform.path")
                     }
                     if let first = entries.first, let lost = summary.lost {
                         HStack { Image(systemName: "circle.lefthalf.filled").foregroundStyle(Theme.pine); Text("\(number(abs(lost) / first.kilograms * 100))% \(lost >= 0 ? "decrease" : "increase") over this period").font(.subheadline) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(Theme.sage, in: RoundedRectangle(cornerRadius: 20))

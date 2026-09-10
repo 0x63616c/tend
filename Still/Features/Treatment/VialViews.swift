@@ -32,10 +32,12 @@ struct VialEditor: View {
         NavigationStack {
             Form {
                 Section("Vial details") {
-                    TextField("Medication", text: $medication)
+                    HStack { VialGlyph(fraction: 1); TextField("Medication", text: $medication) }
                     DatePicker("Received", selection: $received, displayedComponents: .date)
-                    HStack { TextField("Concentration", text: $concentration).keyboardType(.decimalPad); Text("mg/mL").foregroundStyle(.secondary) }
-                    HStack { TextField("Starting volume", text: $volume).keyboardType(.decimalPad); Text("mL").foregroundStyle(.secondary) }
+                    HStack { Text("Concentration"); Spacer(); TextField("0", text: $concentration).keyboardType(.decimalPad).multilineTextAlignment(.trailing).accessibilityLabel("Concentration"); Text("mg/mL").foregroundStyle(.secondary) }
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }.alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+                    HStack { Text("Starting volume"); Spacer(); TextField("0", text: $volume).keyboardType(.decimalPad).multilineTextAlignment(.trailing).accessibilityLabel("Starting volume"); Text("mL").foregroundStyle(.secondary) }
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }.alignmentGuide(.listRowSeparatorTrailing) { $0.width }
                     if let c = parse(concentration), let v = parse(volume), valid { LabeledContent("Total medication", value: "\(number(c * v, digits: 2)) mg") }
                 }
                 Section("Notes") { TextField("Optional note", text: $note, axis: .vertical).lineLimit(3...5) }

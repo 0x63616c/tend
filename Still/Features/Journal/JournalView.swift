@@ -71,7 +71,7 @@ struct JournalView: View {
                 details(title: e.status == .skipped ? "Skipped · \(e.medication)" : "\(number(e.milligrams, digits: 3)) mg · \(e.medication)", subtitle: e.status.rawValue.capitalized, note: e.note)
             case .weight(let e):
                 Image(systemName: "scalemass.fill").foregroundStyle(Theme.aqua).font(.title2)
-                details(title: "\(number(store.journal.unit.display(e.kilograms))) \(store.journal.unit.rawValue)", subtitle: e.date > Date() ? "Planned weight" : "Weight", note: e.note)
+                details(title: "\(number(store.journal.unit.display(e.kilograms))) \(store.journal.unit.symbol)", subtitle: e.date > Date() ? "Planned weight" : "Weight", note: e.note)
             case .checkIn(let e):
                 Image(systemName: "face.smiling").foregroundStyle(.orange).font(.title2)
                 details(title: "Check-in", subtitle: [e.appetite.map { "Appetite \($0)/5" }, e.nausea.map { "Nausea \($0)/5" }].compactMap { $0 }.joined(separator: " · "), note: e.note)
@@ -99,7 +99,8 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("Preferences") {
-                    Picker("Weight unit", selection: Binding(get: { store.journal.unit }, set: { var next = store.journal; next.unit = $0; _ = store.commit(next) })) { ForEach(WeightUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
+                    Picker("Weight unit", selection: Binding(get: { store.journal.unit }, set: { var next = store.journal; next.unit = $0; _ = store.commit(next) })) { ForEach(WeightUnit.allCases, id: \.self) { Text($0.symbol).tag($0) } }
+                    Button("Dose entry") { treatment = true }
                     Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
                 }
                 Section {
@@ -107,7 +108,7 @@ struct SettingsView: View {
                 } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
             }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { dismiss() } }
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
-                .sheet(isPresented: $treatment) { TreatmentEditor() }
+                .sheet(isPresented: $treatment) { DosePreferencesEditor() }
                 .sheet(isPresented: $addingVial) { VialEditor() }
                 .sheet(item: $editingVial) { VialEditor(vial: $0) }
         }

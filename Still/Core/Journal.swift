@@ -2,6 +2,7 @@ import Foundation
 
 public enum WeightUnit: String, Codable, CaseIterable, Sendable {
     case kg, lb
+    public var symbol: String { self == .lb ? "lbs" : "kg" }
     public func display(_ kilograms: Double) -> Double { self == .kg ? kilograms : kilograms * 2.2046226218 }
     public func kilograms(_ value: Double) -> Double { self == .kg ? value : value / 2.2046226218 }
 }
@@ -10,6 +11,7 @@ public struct Journal: Codable, Equatable, Sendable {
     public var goal: WeightGoal?
     public var checkIns: [CheckIn] = []
     public var vials: [Vial] = []
+    public var doseInputUnit: String?
     public var syringeUnitsPerML: Double?
     public var halfLifeDays: Double = 7
     public var appearance = "system"
@@ -21,12 +23,13 @@ public struct Journal: Codable, Equatable, Sendable {
     public var unit: WeightUnit = .lb
     public var schedule = DoseSchedule()
     public init() {}
-    private enum CodingKeys: String, CodingKey { case version, goal, checkIns, vials, syringeUnitsPerML, halfLifeDays, appearance, weights, doses, medication, concentration, containerML, unit, schedule }
+    private enum CodingKeys: String, CodingKey { case doseInputUnit, version, goal, checkIns, vials, syringeUnitsPerML, halfLifeDays, appearance, weights, doses, medication, concentration, containerML, unit, schedule }
     public init(from decoder: Decoder) throws {
         self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
         version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 1
         guard version == 1 else { throw TrackingError.invalidFile }
+        doseInputUnit = try values.decodeIfPresent(String.self, forKey: .doseInputUnit)
         if let value = try values.decodeIfPresent(WeightGoal.self, forKey: .goal) { goal = value }
         if let value = try values.decodeIfPresent([CheckIn].self, forKey: .checkIns) { checkIns = value }
         if let value = try values.decodeIfPresent([Vial].self, forKey: .vials) { vials = value }

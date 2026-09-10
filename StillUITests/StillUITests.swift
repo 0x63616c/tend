@@ -8,6 +8,10 @@ final class StillUITests: XCTestCase {
         app.tabBars.buttons["Home"].tap()
         XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 10))
         capture("Home")
+        app.buttons["Vial details"].tap()
+        XCTAssertTrue(app.textFields["Concentration"].waitForExistence(timeout: 3))
+        capture("Edit Vial")
+        app.buttons["Cancel"].tap()
         app.buttons["logDose"].tap()
         XCTAssertTrue(app.textFields["doseAmount"].waitForExistence(timeout: 3))
         capture("Log dose")
@@ -52,6 +56,30 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Year"].isSelected)
         capture("Polish Progress")
     }
+    @MainActor func testDosePreferencesSurviveRelaunch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitest", "--reset-test-journal"]
+        app.launch()
+        app.buttons["Settings"].tap()
+        app.buttons["Dose entry"].tap()
+        app.segmentedControls.buttons["Units"].tap()
+        app.switches["I use a U-100 syringe"].tap()
+        app.buttons["Save"].tap()
+        app.buttons["Done"].tap()
+        app.terminate()
+        app.launchArguments = ["--uitest"]
+        app.launch()
+        app.buttons["logDose"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["Units"].isSelected)
+        XCTAssertFalse(app.switches["My syringe is U-100"].exists)
+        app.segmentedControls.buttons["mg"].tap()
+        app.textFields["doseAmount"].tap()
+        app.textFields["doseAmount"].typeText("0.15")
+        app.buttons["saveDose"].tap()
+        XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 3))
+        app.buttons["logDose"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["mg"].isSelected)
+    }
     @MainActor func testChangingDoseUnitsPreservesTheDose() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
@@ -61,11 +89,15 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("3")
-        app.segmentedControls.buttons["Skipped"].tap()
-        app.segmentedControls.buttons["Taken"].tap()
+        app.buttons["doseStatus"].tap()
+        app.buttons["Skipped"].tap()
+        app.buttons["doseStatus"].tap()
+        app.buttons["Taken"].tap()
         XCTAssertEqual(field.value as? String, "3")
-        app.segmentedControls.buttons["Planned"].tap()
-        app.segmentedControls.buttons["Taken"].tap()
+        app.buttons["doseStatus"].tap()
+        app.buttons["Planned"].tap()
+        app.buttons["doseStatus"].tap()
+        app.buttons["Taken"].tap()
         XCTAssertEqual(field.value as? String, "3")
         app.segmentedControls.buttons["mg"].tap()
         XCTAssertEqual(field.value as? String, "0.15")
@@ -79,7 +111,7 @@ final class StillUITests: XCTestCase {
         app.launchArguments = ["--demo", "--uitest"]
         app.launch()
         app.buttons["Settings"].tap()
-        app.buttons["Weight unit, lb"].tap()
+        app.buttons["Weight unit, lbs"].tap()
         app.buttons["kg"].tap()
         app.buttons["Done"].tap()
         app.tabBars.buttons["Journal"].tap()
@@ -103,8 +135,8 @@ final class StillUITests: XCTestCase {
         app.launchArguments = ["--uitest"]
         app.launch()
         app.tabBars.buttons["Journal"].tap()
-        XCTAssertTrue(app.staticTexts["200.3 lb"].waitForExistence(timeout: 5))
-        app.staticTexts["200.3 lb"].tap()
+        XCTAssertTrue(app.staticTexts["200.3 lbs"].waitForExistence(timeout: 5))
+        app.staticTexts["200.3 lbs"].tap()
         XCTAssertEqual(app.textFields["weightAmount"].value as? String, "200.3")
     }
     @MainActor func testDoseCanBeSavedThenChangedToSkippedAndPersisted() {
@@ -121,7 +153,8 @@ final class StillUITests: XCTestCase {
         let record = app.staticTexts["0.5 mg · Semaglutide"]
         XCTAssertTrue(record.waitForExistence(timeout: 5))
         record.tap()
-        app.segmentedControls.buttons["Skipped"].tap()
+        app.buttons["doseStatus"].tap()
+        app.buttons["Skipped"].tap()
         XCTAssertFalse(field.exists)
         app.buttons["saveDose"].tap()
         app.terminate()

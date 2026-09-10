@@ -9,12 +9,12 @@ struct GoalCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack { Label("Your goal", systemImage: "scope").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.pine); Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
                 if let goal = store.journal.goal {
-                    HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(goal.kilograms))).font(.system(size: 30, weight: .bold, design: .rounded)); Text(store.journal.unit.rawValue).foregroundStyle(.secondary); Spacer(); if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary) } }
+                    HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(goal.kilograms))).font(.system(size: 30, weight: .bold, design: .rounded)); Text(store.journal.unit.symbol).foregroundStyle(.secondary); Spacer(); if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary) } }
                     if let first = actual.first, let latest = actual.last {
                         let distance = first.kilograms - goal.kilograms
                         let progress = abs(distance) > 0.01 ? (first.kilograms - latest.kilograms) / distance : 1
                         ProgressView(value: min(1, max(0, progress))).tint(Theme.pine)
-                        Text("\(number(store.journal.unit.display(abs(latest.kilograms - goal.kilograms)))) \(store.journal.unit.rawValue) from your goal").font(.caption).foregroundStyle(.secondary)
+                        Text("\(number(store.journal.unit.display(abs(latest.kilograms - goal.kilograms)))) \(store.journal.unit.symbol) from your goal").font(.caption).foregroundStyle(.secondary)
                     }
                 } else { Text("Set a weight goal").font(.headline); Text("A target, with room for real life.").font(.caption).foregroundStyle(.secondary) }
             }.card()
@@ -32,20 +32,20 @@ struct GoalEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Goal weight") { HStack { TextField("Weight", text: $amount).keyboardType(.decimalPad); Text(store.journal.unit.rawValue).foregroundStyle(.secondary) }; Toggle("Target date", isOn: $hasDate); if hasDate { DatePicker("Date", selection: $date, in: Date()..., displayedComponents: .date) } }
+                Section("Goal weight") { HStack { TextField("Weight", text: $amount).keyboardType(.decimalPad); Text(store.journal.unit.symbol).foregroundStyle(.secondary) }; Toggle("Target date", isOn: $hasDate); if hasDate { DatePicker("Date", selection: $date, in: Date()..., displayedComponents: .date) } }
                 if let goal, let current = actual.last {
                     Section("The pace") {
                         if let required = goal.requiredWeeklyChange(current: current.kilograms, now: Date()) {
-                            LabeledContent("Required change", value: "\(number(store.journal.unit.display(required))) \(store.journal.unit.rawValue)/week")
-                            if required < -0.907185 { Text("This requires more than 2 lb/week. Consider a later date with your care team.").font(.footnote).foregroundStyle(.orange) }
+                            LabeledContent("Required change", value: "\(number(store.journal.unit.display(required))) \(store.journal.unit.symbol)/week")
+                            if required < -0.907185 { Text("This requires more than 2 lbs/week. Consider a later date with your care team.").font(.footnote).foregroundStyle(.orange) }
                         }
                         let recent = actual.filter { $0.date > Date().addingTimeInterval(-28 * 86400) }
                         let summary = WeightSummary(entries: recent, now: Date())
                         if recent.count >= 3, let first = recent.first, let last = recent.last, last.date.timeIntervalSince(first.date) >= 7 * 86400, let weekly = summary.weeklyChange {
-                            LabeledContent("Recent pace", value: "\(number(store.journal.unit.display(weekly))) \(store.journal.unit.rawValue)/week")
+                            LabeledContent("Recent pace", value: "\(number(store.journal.unit.display(weekly))) \(store.journal.unit.symbol)/week")
                             if hasDate {
                                 let projection = current.kilograms + weekly * date.timeIntervalSince(current.date) / (7 * 86400)
-                                if EntryValidation.weight(projection) { LabeledContent("At that pace on your date", value: "~\(number(store.journal.unit.display(projection))) \(store.journal.unit.rawValue)") }
+                                if EntryValidation.weight(projection) { LabeledContent("At that pace on your date", value: "~\(number(store.journal.unit.display(projection))) \(store.journal.unit.symbol)") }
                             }
                         } else { Text("Log at least 3 weights across a week for a recent-pace estimate.").font(.footnote).foregroundStyle(.secondary) }
                     }

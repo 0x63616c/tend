@@ -34,9 +34,10 @@ import UserNotifications
         next.weights.removeAll { $0.id == weight.id }; next.weights.append(weight)
         return commit(next)
     }
-    func save(dose: DoseEntry) -> Bool {
+    func save(dose: DoseEntry, inputUnit: String? = nil) -> Bool {
         do { try dose.validate(now: Date()) } catch { self.error = error.localizedDescription; return false }
         var next = journal
+        if let inputUnit { next.doseInputUnit = inputUnit }
         next.doses.removeAll { $0.id == dose.id }; next.doses.append(dose)
         return commit(next)
     }
