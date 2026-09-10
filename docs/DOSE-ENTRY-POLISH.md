@@ -7,4 +7,4 @@
 
 Verified September 10, 2026: 12 core tests and 10 UI tests pass on iOS 26.2 Pro Max. The preference/relaunch test was observed failing before implementation, then passing. Reviewed actual synthetic-data screenshots: [Dose](screenshots/dose-polish-log-dose.png), [Vial](screenshots/dose-polish-edit-vial.png).
 
-Not yet uploaded to TestFlight. Build 5 remains the latest distributed build.
+Shipped in [build 6](BUILD-6.md), verified Testing for Owner Preview on September 10, 2026.

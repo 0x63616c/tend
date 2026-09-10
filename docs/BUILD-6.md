@@ -1,6 +1,6 @@
 # Tendr 1.0.0 (6)
 
-September 10, 2026. Release archive built; TestFlight upload in progress.
+September 10, 2026. Uploaded at 14:35 Pacific. App Store Connect reports **Testing** for Owner Preview, with 90 days remaining. What to Test notes saved. Build ID: `edd55607-4751-4eff-b736-781b3e604703`. Installation of build 6 on a physical device has not been verified.
 
 ## Changes
 
