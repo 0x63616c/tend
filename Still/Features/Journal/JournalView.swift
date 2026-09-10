@@ -13,6 +13,7 @@ struct JournalView: View {
     @State private var dose: DoseEntry?
     @State private var checkIn: CheckIn?
     @State private var deleting: HistoryEntry?
+    @State private var adding: String?
     @State private var filter = "All"
     private var entries: [HistoryEntry] {
         (store.journal.weights.map(HistoryEntry.weight) + store.journal.doses.map(HistoryEntry.dose) + store.journal.checkIns.map(HistoryEntry.checkIn))
@@ -29,16 +30,24 @@ struct JournalView: View {
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(entries.filter { Calendar.current.isDate($0.date, inSameDayAs: day) }) { entry in
                             Button { edit(entry) } label: { row(entry) }.buttonStyle(.plain)
-                                .swipeActions { Button("Delete", role: .destructive) { deleting = entry } }
+                                .swipeActions(allowsFullSwipe: false) { Button("Delete", role: .destructive) { deleting = entry }.tint(.red) }
                         }
                     }
                 }
                 if entries.isEmpty { ContentUnavailableView("No entries yet", systemImage: "book.closed", description: Text("Your doses, weights and check-ins appear here.")) }
             }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Journal")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" }; Button("Check-in") { adding = "Check-in" } } label: { Image(systemName: "plus") }.accessibilityLabel("Add entry")
+                    }
+                }
+                .sheet(isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } })) {
+                    if adding == "Weight" { WeightEditor() } else if adding == "Dose" { DoseEditor() } else { CheckInEditor() }
+                }
                 .sheet(item: $weight) { WeightEditor(entry: $0) }
                 .sheet(item: $dose) { DoseEditor(entry: $0) }
                 .sheet(item: $checkIn) { CheckInEditor(entry: $0) }
-                .confirmationDialog("Delete this entry?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+                .alert("Delete this entry?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
                     Button("Delete entry", role: .destructive) {
                         guard let deleting else { return }
                         switch deleting {
@@ -69,13 +78,13 @@ struct JournalView: View {
             }
             Spacer(minLength: 4)
             Text(entry.date, format: .dateTime.hour().minute()).font(.caption2).foregroundStyle(.secondary)
-        }.padding(.vertical, 8)
+        }.padding(.vertical, 8).contentShape(Rectangle())
     }
     private func details(title: String, subtitle: String, note: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            if !note.isEmpty { Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+
         }
     }
 }

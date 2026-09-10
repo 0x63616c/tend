@@ -26,9 +26,9 @@ struct CheckInEditor: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    rating(title: "Appetite", low: "Not hungry", high: "Very hungry", selection: $appetite, color: Theme.aqua)
-                    rating(title: "Nausea", low: "None", high: "Severe", selection: $nausea, color: .orange)
-                    VStack(spacing: 16) { DatePicker("Date", selection: $date, in: ...Date()); DisclosureGroup("Note") { TextField("Anything to add?", text: $note, axis: .vertical).lineLimit(2...5) } }.card()
+                    rating(title: "Appetite", low: "Not hungry", middle: "Moderately hungry", high: "Very hungry", selection: $appetite, color: Theme.aqua)
+                    rating(title: "Nausea", low: "None", middle: "Moderate", high: "Severe", selection: $nausea, color: .orange)
+                    VStack(spacing: 16) { DatePicker("Date", selection: $date, in: ...Date()); DisclosureGroup("Note") { TextField("Anything to add?", text: $note, axis: .vertical).lineLimit(2...5).padding(.top, 8) } }.card()
                 }.padding(20)
             }.background(Theme.background).navigationTitle("Check-in").navigationBarTitleDisplayMode(.inline)
                 .safeAreaInset(edge: .bottom) { Button {
@@ -38,11 +38,16 @@ struct CheckInEditor: View {
                     var next = store.journal; next.checkIns.removeAll { $0.id == updated.id }; next.checkIns.append(updated)
                     if store.commit(next) { dismiss() }
                 } label: { Text("Save Check-in").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(appetite == nil && nausea == nil).padding(20).background(.bar) }
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    if let entry { ToolbarItem(placement: .topBarTrailing) { DeleteEntryButton {
+                        var next = store.journal; next.checkIns.removeAll { $0.id == entry.id }; return store.commit(next)
+                    } } }
+                }
                 .onAppear { if let entry { appetite = entry.appetite; nausea = entry.nausea; date = entry.date; note = entry.note } }
         }
     }
-    func rating(title: String, low: String, high: String, selection: Binding<Int?>, color: Color) -> some View {
+    func rating(title: String, low: String, middle: String, high: String, selection: Binding<Int?>, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(title).font(.title3.weight(.semibold))
             HStack(spacing: 12) {
@@ -52,7 +57,7 @@ struct CheckInEditor: View {
                     }.accessibilityLabel("\(title) \(score) of 5").accessibilityAddTraits(selection.wrappedValue == score ? .isSelected : [])
                 }
             }
-            HStack { Text(low); Spacer(); Text(high) }.font(.caption).foregroundStyle(.secondary)
+            HStack { Text(low); Spacer(); Text(middle); Spacer(); Text(high) }.font(.caption).foregroundStyle(.secondary)
         }.card()
     }
 }

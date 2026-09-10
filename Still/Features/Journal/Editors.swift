@@ -18,10 +18,7 @@ struct WeightEditor: View {
                     VStack(spacing: 18) {
                         Image(systemName: "scalemass.fill").font(.title).foregroundStyle(Theme.aqua)
                         TextField("0.0", text: $amount).keyboardType(.decimalPad).font(.system(size: 62, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Weight").accessibilityIdentifier("weightAmount")
-                        Picker("Weight unit", selection: Binding(get: { unit }, set: { newUnit in
-                            if let kilograms { amount = newUnit.display(kilograms).formatted(.number.grouping(.never).precision(.fractionLength(0...8))) }
-                            unit = newUnit
-                        })) { Text("Pounds").tag(WeightUnit.lb); Text("Kilograms").tag(WeightUnit.kg) }.pickerStyle(.segmented)
+                        Text(unit.rawValue).font(.subheadline).foregroundStyle(.secondary)
                         if !amount.isEmpty && !valid { Text("Enter \(number(unit.display(20)))–\(number(unit.display(500))) \(unit.rawValue).").font(.caption).foregroundStyle(.orange) }
                     }.card()
                     VStack(alignment: .leading, spacing: 16) {
@@ -38,7 +35,10 @@ struct WeightEditor: View {
                     } label: { Text("Save Weight").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 10) }.buttonStyle(.borderedProminent).disabled(!valid).accessibilityIdentifier("saveWeight")
                 }.padding(20)
             }.background(Theme.background).navigationTitle(entry == nil ? "Add Weight" : "Edit Weight").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    if let entry { ToolbarItem(placement: .topBarTrailing) { DeleteEntryButton { store.delete(weight: entry) } } }
+                }
                 .onAppear { unit = store.journal.unit; if let entry { amount = unit.display(entry.kilograms).formatted(.number.grouping(.never).precision(.fractionLength(0...8))); date = entry.date; note = entry.note } }
         }
     }
@@ -49,6 +49,7 @@ struct DoseEditor: View {
     @Environment(\.dismiss) private var dismiss
     var entry: DoseEntry?
     @State private var amount = ""
+    @State private var initialized = false
     @State private var date = Date()
     @State private var note = ""
     @State private var status = DoseEntry.Status.taken
@@ -80,7 +81,7 @@ struct DoseEditor: View {
                     if status != .skipped {
                         VStack(spacing: 16) {
                             Picker("Input unit", selection: Binding(get: { mode }, set: { changeMode($0) })) { Text("mg").tag("mg"); Text("mL").tag("mL"); Text("Units").tag("units") }.pickerStyle(.segmented)
-                            HStack(alignment: .firstTextBaseline) {
+                            ZStack(alignment: .trailing) {
                                 TextField("0", text: $amount).keyboardType(.decimalPad).font(.system(size: 54, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Dose amount").accessibilityIdentifier("doseAmount")
                                 Text(mode).font(.title3).foregroundStyle(.secondary)
                             }.padding(.vertical, 10)
@@ -98,7 +99,7 @@ struct DoseEditor: View {
                                     ForEach(store.journal.vials.sorted { $0.received > $1.received }) { item in Text("\(item.medication) · \(item.received.formatted(date: .abbreviated, time: .omitted))").tag(Optional(item.id)) }
                                 }
                                 if let concentration { HStack { Text("Concentration"); Spacer(); Text("\(number(concentration, digits: 3)) mg/mL") }.font(.caption).foregroundStyle(.secondary) }
-                                Button("Add a vial") { addingVial = true }.font(.subheadline)
+                                Button { addingVial = true } label: { Label("Add a vial", systemImage: "plus") }.buttonStyle(.bordered).font(.subheadline)
                             }.card()
                         }
                     }
@@ -112,10 +113,14 @@ struct DoseEditor: View {
             }.safeAreaInset(edge: .bottom) {
                 Button { save() } label: { Text(status == .skipped ? "Mark Skipped" : status == .planned ? "Save Plan" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose").padding(.horizontal, 20).padding(.vertical, 10).background(.bar)
             }.background(Theme.background).navigationTitle(entry == nil ? "Log Dose" : "Edit Dose").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    if let entry { ToolbarItem(placement: .topBarTrailing) { DeleteEntryButton { store.delete(dose: entry) } } }
+                }
                 .sheet(isPresented: $addingVial) { VialEditor() }
                 .onChange(of: date) { _, date in if date > Date() && status == .taken { status = .planned } }
                 .onAppear {
+                    guard !initialized else { return }; initialized = true
                     confirmedU100 = store.journal.syringeUnitsPerML == 100
                     if let entry {
                         amount = number(entry.syringeUnits ?? entry.milligrams, digits: 4); mode = entry.syringeUnits != nil ? "units" : "mg"
@@ -186,5 +191,19 @@ struct ScheduleEditor: View {
                 }.disabled(days.isEmpty) } }
                 .onAppear { days = store.journal.schedule.weekdays; reminders = store.journal.schedule.enabled; time = Calendar.current.date(bySettingHour: store.journal.schedule.hour, minute: store.journal.schedule.minute, second: 0, of: Date())! }
         }
+    }
+}
+
+struct DeleteEntryButton: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirming = false
+    let delete: () -> Bool
+    var body: some View {
+        Button(role: .destructive) { confirming = true } label: { Image(systemName: "trash") }
+            .accessibilityLabel("Delete entry")
+            .alert("Delete this entry?", isPresented: $confirming) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) { if delete() { dismiss() } }
+            } message: { Text("This cannot be undone.") }
     }
 }

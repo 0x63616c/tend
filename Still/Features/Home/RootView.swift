@@ -73,7 +73,7 @@ struct TodayView: View {
                         HStack {
                             stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", suffix: store.journal.unit.rawValue)
                             Spacer(); Divider().frame(height: 32); Spacer()
-                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.rawValue)
+                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.rawValue, alignment: .trailing)
                         }
                     }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle()).onTapGesture { weightDetail = true }
                     CheckInCard()
@@ -89,8 +89,8 @@ struct TodayView: View {
                 .sheet(isPresented: $vialSheet) { VialEditor(vial: store.journal.vials.sorted { $0.received > $1.received }.first) }
         }
     }
-    func stat(title: String, value: String, suffix: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    func stat(title: String, value: String, suffix: String, alignment: HorizontalAlignment = .leading) -> some View {
+        VStack(alignment: alignment, spacing: 4) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value).font(.system(.title3, design: .rounded, weight: .semibold)); Text(suffix).font(.caption).foregroundStyle(.secondary) }
         }
@@ -119,6 +119,7 @@ struct WeightChart: View {
                 RuleMark(x: .value("Selected", nearest.date)).foregroundStyle(.secondary.opacity(0.4)).annotation(position: .top) { Text("\(number(unit.display(nearest.kilograms))) \(unit.rawValue)").font(.caption.bold()).padding(5).background(Theme.card, in: Capsule()) }
             }
         }.chartXSelection(value: $selected).chartYScale(domain: bounds)
+            .chartXScale(range: .plotDimension(padding: compact ? 4 : 20))
             .chartXAxis { if !compact { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } } }
             .chartYAxis { if !compact { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.12)); AxisValueLabel() } } }
             .accessibilityLabel("Weight history in \(unit.rawValue)")
@@ -169,8 +170,10 @@ struct ProgressViewScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon).foregroundStyle(Theme.pine)
             Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
-            Text(foot).font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
+                Text(foot).font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+            }
         }.frame(maxWidth: .infinity, alignment: .leading).card()
     }
 }

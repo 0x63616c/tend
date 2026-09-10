@@ -16,7 +16,7 @@ struct VialSummary: View {
                 Text("\(number(remaining, digits: 2)) of \(number(vial.volumeML)) mL remaining").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Text("\(number(vial.concentration))\nmg/mL").font(.caption.weight(.medium)).multilineTextAlignment(.trailing).foregroundStyle(.secondary)
+            Text("\(number(vial.concentration)) mg/mL").font(.caption.weight(.medium)).multilineTextAlignment(.trailing).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity, alignment: .leading).card()
         .accessibilityElement(children: .combine)
     }

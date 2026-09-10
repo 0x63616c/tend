@@ -34,6 +34,12 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("3")
+        app.segmentedControls.buttons["Skipped"].tap()
+        app.segmentedControls.buttons["Taken"].tap()
+        XCTAssertEqual(field.value as? String, "3")
+        app.segmentedControls.buttons["Planned"].tap()
+        app.segmentedControls.buttons["Taken"].tap()
+        XCTAssertEqual(field.value as? String, "3")
         app.segmentedControls.buttons["mg"].tap()
         XCTAssertEqual(field.value as? String, "0.15")
         app.segmentedControls.buttons["mL"].tap()
@@ -128,6 +134,29 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Progress"].waitForExistence(timeout: 5))
         app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["logDose"].exists)
+    }
+    @MainActor func testJournalCanAddEditAndDeleteCheckIn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitest", "--reset-test-journal"]
+        app.launch()
+        app.tabBars.buttons["Journal"].tap()
+        XCTAssertTrue(app.buttons["Add entry"].waitForExistence(timeout: 5))
+        app.buttons["Add entry"].tap()
+        app.buttons["Check-in"].tap()
+        app.buttons["Appetite 3 of 5"].tap()
+        app.buttons["Save Check-in"].tap()
+        app.staticTexts["Appetite 3/5"].tap()
+        app.buttons["Delete entry"].tap()
+        app.alerts.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["Save Check-in"].exists)
+        app.buttons["Delete entry"].tap()
+        app.alerts.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No entries yet"].waitForExistence(timeout: 5))
+        app.terminate()
+        app.launchArguments = ["--uitest"]
+        app.launch()
+        app.tabBars.buttons["Journal"].tap()
+        XCTAssertTrue(app.staticTexts["No entries yet"].exists)
     }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

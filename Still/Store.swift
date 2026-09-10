@@ -40,8 +40,8 @@ import UserNotifications
         next.doses.removeAll { $0.id == dose.id }; next.doses.append(dose)
         return commit(next)
     }
-    func delete(weight: WeightEntry) { var next = journal; next.weights.removeAll { $0.id == weight.id }; _ = commit(next) }
-    func delete(dose: DoseEntry) { var next = journal; next.doses.removeAll { $0.id == dose.id }; _ = commit(next) }
+    @discardableResult func delete(weight: WeightEntry) -> Bool { var next = journal; next.weights.removeAll { $0.id == weight.id }; return commit(next) }
+    @discardableResult func delete(dose: DoseEntry) -> Bool { var next = journal; next.doses.removeAll { $0.id == dose.id }; return commit(next) }
     static let reminderTitle = "Time for your check-in"
     static let reminderBody = "Open Tend to review your schedule and log your dose."
     func sendTestReminder() async -> String {
