@@ -7,17 +7,17 @@ struct MedicationCard: View {
     @State private var detail = false
     @State private var selected: Date?
     @State private var info = false
-    @State private var showPlans = false
-    let now = Date()
+    @State private var now = Date()
+    var model: MedicationModel { store.journal.resolvedMedicationModel }
     var halfLife: Double { store.journal.halfLifeDays }
     var samples: [LevelSample] {
-        (-112...112).map { offset in
-            let date = now.addingTimeInterval(Double(offset) * 3 * 3600)
+        (-336...336).map { offset in
+            let date = now.addingTimeInterval(Double(offset) * 3600)
             return LevelSample(date: date, amount: amount(at: date), future: date > now)
         }
     }
     func amount(at date: Date) -> Double {
-        MedicationLevel.remaining(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: showPlans, now: now)
+        MedicationLevel.remaining(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: now, model: model)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -31,10 +31,10 @@ struct MedicationCard: View {
             }
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let timestamp = selected ?? context.date
-                let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: showPlans, now: context.date)
+                let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(value.formatted(.number.precision(.fractionLength(selected == nil ? 5 : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                        Text(value.formatted(.number.precision(.fractionLength(selected == nil ? store.journal.liveDecimalPlaces : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
                         Text("mg").font(.headline).foregroundStyle(.secondary)
                         Spacer()
                     }
@@ -62,15 +62,14 @@ struct MedicationCard: View {
             .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
             .frame(height: expanded ? 300 : 145)
             .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart").contentShape(Rectangle()).simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
-            .accessibilityLabel("Estimated medication decay. Solid line shows history; dashed line shows projection.")
+            .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
             HStack(spacing: 14) {
-                Label("\(number(halfLife))d half-life", systemImage: "clock").font(.caption).foregroundStyle(.secondary)
+                Label(model == .halfLife ? "\(number(halfLife))d half-life" : "Absorption + clearance", systemImage: "waveform.path").font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button { showPlans.toggle() } label: {
-                    Label("Plans", systemImage: showPlans ? "checkmark.circle.fill" : "plus.circle").font(.caption.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 6).background(Theme.pine.opacity(0.1), in: Capsule())
-                }.accessibilityLabel("Include explicitly planned doses").accessibilityValue(showPlans ? "On" : "Off")
+                Text("Dashed · projection").font(.caption).foregroundStyle(.secondary)
             }
         }.card()
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
         .sheet(isPresented: $detail) {
             NavigationStack {
                 ScrollView { MedicationCard(expanded: true).padding(16) }.background(Theme.background).navigationTitle("Medication").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { detail = false } }
@@ -80,14 +79,16 @@ struct MedicationCard: View {
             NavigationStack {
                 List {
                     Section("An estimate, not a measurement") {
-                        Text("This graph adds the remaining fraction of each logged dose using a simple half-life model. It is not your measured blood level or the exact amount in your body.")
-                        Text("It assumes immediate absorption and does not account for individual clearance, bioavailability, or delayed absorption. Do not use it to choose or change a dose.")
+                        Text("This graph estimates absorbed medication remaining from your recorded doses. It is not a measured blood level or the exact amount in your body.")
+                        Text("Injection models include gradual absorption, distribution and clearance using published reference parameters. They are not personalised to your body or vial formulation. Extra decimal places do not add medical accuracy. Do not use the graph to choose or change a dose.")
                     }
-                    Section("Projection") { Text("The dashed line assumes no further doses unless Plans is on. Plans includes only future doses you explicitly entered. Your weekly schedule does not invent dose amounts.") }
-                    Section("Half-life") {
-                        Text("Current assumption: \(number(halfLife)) days. Semaglutide labeling describes approximately 1 week; tirzepatide approximately 5 days. You can change the assumption in Treatment details.")
-                        Link("Semaglutide prescribing information", destination: URL(string: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2026/209637s038lbl.pdf")!)
-                        Link("Tirzepatide prescribing information", destination: URL(string: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=0818426a-53eb-4db7-9609-bbae1e7a3964")!)
+                    Section("Projection") { Text("The dashed line always includes future doses you explicitly entered. Planned doses never count as already taken. Your weekly schedule does not invent dose amounts.") }
+                    Section("Model") {
+                        Text(model.title)
+                        if model == .halfLife { Text("Immediate absorption with a \(number(halfLife))-day half-life. Choose an injection model in Treatment details to include absorption.") }
+                        else { Text("Two compartments with first-order absorption and elimination. The displayed mg excludes medication still at the injection site. Reference profiles are fixed; individual weight, health, injection site and formulation can change the real curve.") }
+                        Link("Semaglutide model · Overgaard 2019", destination: URL(string: "https://doi.org/10.1007/s13300-019-0581-y")!)
+                        Link("Tirzepatide model · Schneck 2024", destination: URL(string: "https://doi.org/10.1002/psp4.13099")!)
                     }
                 }.navigationTitle("About this graph").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { info = false } }
             }

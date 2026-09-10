@@ -8,6 +8,8 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(journal.checkIns, [])
         XCTAssertEqual(journal.vials, [])
         XCTAssertEqual(journal.halfLifeDays, 7)
+        XCTAssertEqual(journal.liveDecimalPlaces, 5)
+        XCTAssertEqual(journal.resolvedMedicationModel, .semaglutide)
         XCTAssertThrowsError(try JSONDecoder().decode(Journal.self, from: Data(#"{"version":999}"#.utf8)))
     }
     func testNewJournalDoesNotInventADosingSchedule() {
@@ -76,6 +78,34 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(try vial.milligrams(units: 3, unitsPerML: 100), 0.15, accuracy: 0.000001)
         XCTAssertThrowsError(try vial.milligrams(units: 3, unitsPerML: 0))
         XCTAssertThrowsError(try vial.milligrams(units: -3, unitsPerML: 100))
+    }
+    func testAbsorptionModelMatchesIndependentIntegrationAndStartsAtZero() {
+        let start = Date(timeIntervalSince1970: 1700000000)
+        let dose = DoseEntry(date: start, medication: "Semaglutide", milligrams: 1)
+        // Fixed values from scripts/absorption_reference.py (independent RK4 integration).
+        for (model, expected) in [(MedicationModel.semaglutide, [0.021060421626, 0.354583889016, 0.563089039286, 0.460457116966, 0.227180051501]), (.tirzepatide, [0.029098184638, 0.416136562924, 0.536849850677, 0.376834602383, 0.174225352517])] {
+            XCTAssertEqual(MedicationLevel.remaining(at: start, doses: [dose], medication: "Semaglutide", halfLifeDays: 7, now: start, model: model), 0)
+            for (hours, value) in zip([1, 24, 72, 168, 336], expected) {
+                XCTAssertEqual(MedicationLevel.remaining(at: start.addingTimeInterval(Double(hours)*3600), doses: [dose], medication: "Semaglutide", halfLifeDays: 7, now: start, model: model), value, accuracy: 0.000000001)
+            }
+        }
+    }
+    func testAbsorptionPlansOnlyAffectFutureAndNeverIncludeSkippedOrOtherMedications() {
+        let start = Date(timeIntervalSince1970: 1700000000)
+        let planDate = start.addingTimeInterval(48 * 3600)
+        let doses = [
+            DoseEntry(date: start, medication: "Semaglutide", milligrams: 1),
+            DoseEntry(date: planDate, medication: "Semaglutide", milligrams: 0.5, status: .planned),
+            DoseEntry(date: start, medication: "Semaglutide", milligrams: 9, status: .skipped),
+            DoseEntry(date: start, medication: "Other", milligrams: 9),
+            DoseEntry(date: planDate, medication: "Semaglutide", milligrams: 9),
+            DoseEntry(date: start.addingTimeInterval(-3600), medication: "Semaglutide", milligrams: 9, status: .planned)
+        ]
+        let current = start.addingTimeInterval(24 * 3600)
+        XCTAssertEqual(MedicationLevel.remaining(at: current, doses: doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: current, model: .semaglutide), 0.354583889016, accuracy: 1e-9)
+        let future = start.addingTimeInterval(72 * 3600)
+        XCTAssertEqual(MedicationLevel.remaining(at: future, doses: doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: current, model: .semaglutide), 0.740380983794, accuracy: 1e-9)
+        XCTAssertEqual(MedicationLevel.remaining(at: future, doses: doses, medication: "Semaglutide", halfLifeDays: 7, now: current, model: .semaglutide), 0.563089039286, accuracy: 1e-9)
     }
     func testHalfLifeModelAddsOnlyMatchingTakenDosesAndExplicitFuturePlans() {
         let start = Date(timeIntervalSince1970: 1700000000)

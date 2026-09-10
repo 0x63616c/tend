@@ -7,11 +7,23 @@ struct RootView: View {
     var body: some View {
         @Bindable var store = store
         TabView(selection: $selected) {
-            TodayView().tag(0).tabItem { Label("Home", systemImage: "square.grid.2x2.fill") }
-            TreatmentView().tag(1).tabItem { Label("Treatment", systemImage: "syringe.fill") }
-            ProgressViewScreen().tag(2).tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }
-            JournalView().tag(3).tabItem { Label("Journal", systemImage: "book.closed") }
-            DiscoverView().tag(4).tabItem { Label("Discover", systemImage: "safari") }
+            TodayView().toolbar(.hidden, for: .tabBar).tag(0).tabItem { Label("Home", systemImage: "square.grid.2x2.fill") }
+            TreatmentView().toolbar(.hidden, for: .tabBar).tag(1).tabItem { Label("Treatment", systemImage: "syringe.fill") }
+            ProgressViewScreen().toolbar(.hidden, for: .tabBar).tag(2).tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }
+            JournalView().toolbar(.hidden, for: .tabBar).tag(3).tabItem { Label("Journal", systemImage: "book.closed") }
+            DiscoverView().toolbar(.hidden, for: .tabBar).tag(4).tabItem { Label("Discover", systemImage: "safari") }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider().overlay(Color.primary.opacity(0.05))
+                HStack(spacing: 0) {
+                    navigationItem("Home", icon: "square.grid.2x2", index: 0)
+                    navigationItem("Treatment", icon: "syringe", index: 1)
+                    navigationItem("Progress", icon: "chart.xyaxis.line", index: 2)
+                    navigationItem("Journal", icon: "book.closed", index: 3)
+                    navigationItem("Discover", icon: "safari", index: 4)
+                }.padding(.horizontal, 8).padding(.top, 6).padding(.bottom, 2)
+            }.background(Theme.background)
         }
         .alert("Something needs attention", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK") { store.error = nil }
@@ -19,6 +31,18 @@ struct RootView: View {
         .preferredColorScheme(store.journal.appearance == "dark" ? .dark : store.journal.appearance == "light" ? .light : nil)
         .task { await store.syncReminders() }
     }
+    private func navigationItem(_ title: String, icon: String, index: Int) -> some View {
+        Button { selected = index } label: {
+            VStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 21, weight: selected == index ? .semibold : .regular))
+                Text(title).font(.caption2).lineLimit(1).minimumScaleFactor(0.8)
+            }.frame(maxWidth: .infinity).frame(minHeight: 48)
+                .foregroundStyle(selected == index ? Theme.pine : Color.secondary)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityLabel(title).accessibilityIdentifier("nav" + title)
+            .accessibilityAddTraits(selected == index ? .isSelected : [])
+    }
+
 }
 
 struct TodayView: View {

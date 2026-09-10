@@ -104,6 +104,9 @@ struct SettingsView: View {
                     Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
                 }
                 Section {
+                    Picker("Decimal places", selection: Binding(get: { store.journal.liveDecimalPlaces }, set: { var next = store.journal; next.liveDecimalPlaces = $0; _ = store.commit(next) })) { ForEach(3...7, id: \.self) { Text("\($0)").tag($0) } }
+                } header: { Text("Live estimate") } footer: { Text("Extra digits show the calculation changing, not greater medical accuracy.") }
+                Section {
                     NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
                 } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
             }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { dismiss() } }
@@ -119,19 +122,21 @@ struct TreatmentEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var medication = ""
     @State private var halfLife = 7.0
+    @State private var model = MedicationModel.halfLife
     @State private var u100 = false
     var body: some View {
         NavigationStack {
             Form {
                 Section("Medication") {
                     TextField("Medication name", text: $medication)
-                    HStack { Button("Semaglutide") { medication = "Semaglutide"; halfLife = 7 }; Spacer(); Button("Tirzepatide") { medication = "Tirzepatide"; halfLife = 5 } }.font(.caption)
+                    HStack { Button("Semaglutide") { medication = "Semaglutide"; halfLife = 7; model = .semaglutide }; Spacer(); Button("Tirzepatide") { medication = "Tirzepatide"; halfLife = 5; model = .tirzepatide } }.font(.caption)
                 }
-                Section { Stepper("\(number(halfLife)) days", value: $halfLife, in: 0.5...30, step: 0.5) } header: { Text("Model half-life") } footer: { Text("Used only for the estimate graph. Your dose and schedule are set separately.") }
+                Section("Estimate model") { Picker("Model", selection: $model) { ForEach(MedicationModel.allCases, id: \.self) { Text($0.title).tag($0) } } }
+                if model == .halfLife { Section { Stepper("\(number(halfLife)) days", value: $halfLife, in: 0.5...30, step: 0.5) } header: { Text("Model half-life") } footer: { Text("Used only for the estimate graph. Your dose and schedule are set separately.") } }
                 Section { Toggle("I use a U-100 syringe", isOn: $u100) } header: { Text("Dose entry") } footer: { Text("U-100 means 100 units per mL. Check the marking on your syringe.") }
             }.navigationTitle("Treatment").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { var next = store.journal; next.medication = medication.trimmingCharacters(in: .whitespacesAndNewlines); next.halfLifeDays = halfLife; next.syringeUnitsPerML = u100 ? 100 : nil; if store.commit(next) { dismiss() } }.disabled(medication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } }
-                .onAppear { medication = store.journal.medication; halfLife = store.journal.halfLifeDays; u100 = store.journal.syringeUnitsPerML == 100 }
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { var next = store.journal; next.medication = medication.trimmingCharacters(in: .whitespacesAndNewlines); next.halfLifeDays = halfLife; next.medicationModel = model; next.syringeUnitsPerML = u100 ? 100 : nil; if store.commit(next) { dismiss() } }.disabled(medication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } }
+                .onAppear { medication = store.journal.medication; halfLife = store.journal.halfLifeDays; model = store.journal.resolvedMedicationModel; u100 = store.journal.syringeUnitsPerML == 100 }
         }
     }
 }
