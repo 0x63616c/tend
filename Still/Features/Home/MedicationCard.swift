@@ -33,18 +33,10 @@ struct MedicationCard: View {
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: selected != nil)) { context in
                 let timestamp = selected ?? context.date
                 let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(value.formatted(.number.precision(.fractionLength(selected == nil ? store.journal.liveDecimalPlaces : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
-                        Text("mg").font(.headline).foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    HStack(spacing: 6) {
-                        Circle().fill(selected == nil ? Color.green : Theme.pine).frame(width: 5, height: 5)
-                        Text(selected == nil ? "Live model estimate" : "Model estimate").font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Text(timestamp, format: selected == nil ? .dateTime.hour().minute().second() : .dateTime.month(.abbreviated).day().hour().minute()).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                    }
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(value.formatted(.number.precision(.fractionLength(selected == nil ? store.journal.liveDecimalPlaces : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
+                    Text("mg").font(.headline).foregroundStyle(.secondary)
+                    Spacer()
                 }
             }
             Chart {
@@ -64,11 +56,7 @@ struct MedicationCard: View {
             .frame(height: expanded ? 300 : 145)
             .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart").contentShape(Rectangle()).simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
             .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
-            HStack(spacing: 14) {
-                Label(model == .halfLife ? "\(number(halfLife))d half-life" : "Absorption + clearance", systemImage: "waveform.path").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Text("Dashed · projection").font(.caption).foregroundStyle(.secondary)
-            }
+
         }.card()
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
         .sheet(isPresented: $detail) {

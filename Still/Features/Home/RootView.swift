@@ -63,7 +63,16 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
-                            if let nextDate { Text(nextDate, format: .dateTime.weekday(.wide)).font(.title3.weight(.semibold)); Text(nextDate, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) } else { Button("Set your schedule") { scheduleSheet = true }.font(.headline) }
+                            if let nextDate {
+                                HStack(alignment: .center, spacing: 8) {
+                                    Text(nextDate, format: .dateTime.weekday(.wide)).font(.title3.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                                    Spacer(minLength: 0)
+                                    VStack(alignment: .trailing, spacing: 3) {
+                                        Text(nextDate, format: .dateTime.month(.abbreviated).day())
+                                        Text(nextDate, format: .dateTime.hour().minute())
+                                    }.font(.caption).foregroundStyle(.secondary).fixedSize()
+                                }.frame(minHeight: 54)
+                            } else { Button("Set your schedule") { scheduleSheet = true }.font(.headline) }
                             Button { doseSheet = true } label: { Label("Log dose", systemImage: "plus").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 3) }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("logDose")
                         }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 132).card()
                         Button { vialSheet = true } label: {
@@ -84,7 +93,7 @@ struct TodayView: View {
                                     Text(summary.latest.map { number(store.journal.unit.display($0)) } ?? "—").font(.system(size: 32, weight: .bold, design: .rounded))
                                     Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
                                 }
-                                Text("Latest weight").font(.caption).foregroundStyle(.secondary)
+                                Text("Latest").font(.caption).foregroundStyle(.secondary)
                             }
                             WeightChart(entries: store.journal.weights.filter { $0.date <= Date() }, unit: store.journal.unit, compact: true).frame(height: 65)
                         }
