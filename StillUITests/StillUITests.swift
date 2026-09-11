@@ -7,6 +7,7 @@ final class StillUITests: XCTestCase {
         app.launch()
         app.buttons["navHome"].tap()
         XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.images["medicationTrendIndicator"].exists)
         XCTAssertFalse(app.buttons["Include explicitly planned doses"].exists)
         capture("Home")
         app.buttons["Vial details"].tap()

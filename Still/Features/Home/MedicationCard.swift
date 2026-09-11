@@ -33,9 +33,16 @@ struct MedicationCard: View {
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: selected != nil)) { context in
                 let timestamp = selected ?? context.date
                 let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
+                let previousValue = MedicationLevel.remaining(at: timestamp.addingTimeInterval(-1), doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(value.formatted(.number.precision(.fractionLength(selected == nil ? store.journal.liveDecimalPlaces : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
                     Text("mg").font(.headline).foregroundStyle(.secondary)
+                    if value != previousValue {
+                        Image(systemName: value > previousValue ? "arrow.up" : "arrow.down")
+                            .font(.caption.bold()).foregroundStyle(value > previousValue ? .green : .secondary)
+                            .accessibilityLabel(value > previousValue ? "Medication level rising" : "Medication level falling")
+                            .accessibilityIdentifier("medicationTrendIndicator")
+                    }
                     Spacer()
                 }
             }
