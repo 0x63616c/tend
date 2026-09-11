@@ -3,6 +3,8 @@ default_platform(:ios)
 APP_IDENTIFIER = "com.calumwebb.still"
 APP_VERSION = "1.0.0"
 INTERNAL_GROUP = "Owner Preview"
+BETA_DESCRIPTION = "Tendr is a private, local-first companion for tracking doses, medication levels, vials, weight, schedules, and progress."
+BETA_FEEDBACK_EMAIL = ENV.fetch("ASC_BETA_FEEDBACK_EMAIL")
 
 private_lane :connect_api_key do
   key_path = ENV["ASC_KEY_PATH"]
@@ -43,12 +45,16 @@ platform :ios do
     upload_to_testflight(
       api_key: connect_api_key,
       app_identifier: APP_IDENTIFIER,
+      app_platform: "ios",
       app_version: options[:version] || APP_VERSION,
       build_number: build_number.to_s,
       distribute_only: true,
       distribute_external: false,
+      submit_beta_review: false,
       groups: [INTERNAL_GROUP],
-      skip_waiting_for_build_processing: false
+      skip_waiting_for_build_processing: false,
+      beta_app_description: BETA_DESCRIPTION,
+      beta_app_feedback_email: BETA_FEEDBACK_EMAIL
     )
   end
 
@@ -82,7 +88,10 @@ platform :ios do
       build_number: build_number.to_s,
       groups: [INTERNAL_GROUP],
       distribute_external: false,
+      submit_beta_review: false,
       skip_waiting_for_build_processing: false,
+      beta_app_description: BETA_DESCRIPTION,
+      beta_app_feedback_email: BETA_FEEDBACK_EMAIL,
       changelog: options[:changelog] || "Small interface refinements and reliability improvements."
     )
   end

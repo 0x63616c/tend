@@ -21,7 +21,15 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios verify
 ```
 
-Run the core and simulator UI tests
+Run the fast core test suite
+
+### ios ui
+
+```sh
+[bundle exec] fastlane ios ui
+```
+
+Run the full end-to-end simulator suite when UI behavior changes
 
 ### ios distribute_existing
 
