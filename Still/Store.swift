@@ -88,7 +88,7 @@ import UserNotifications
                 let request = UNNotificationRequest(identifier: "still-weekday-\(day)", content: content, trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
                 try await center.add(request)
             }
-            reminderStatus = "On · \(journal.schedule.weekdays.count) days a week"
+            reminderStatus = "Reminders on"
         } catch { reminderStatus = "Could not schedule reminders"; self.error = error.localizedDescription }
     }
     static func demoJournal() -> Journal {
