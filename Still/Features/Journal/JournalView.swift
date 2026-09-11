@@ -1,22 +1,21 @@
 import SwiftUI
 
 private enum HistoryEntry: Identifiable {
-    case weight(WeightEntry), dose(DoseEntry), checkIn(CheckIn)
-    var id: UUID { switch self { case .weight(let e): e.id; case .dose(let e): e.id; case .checkIn(let e): e.id } }
-    var date: Date { switch self { case .weight(let e): e.date; case .dose(let e): e.date; case .checkIn(let e): e.date } }
-    var kind: String { switch self { case .weight: "Weight"; case .dose: "Doses"; case .checkIn: "Check-ins" } }
+    case weight(WeightEntry), dose(DoseEntry)
+    var id: UUID { switch self { case .weight(let e): e.id; case .dose(let e): e.id } }
+    var date: Date { switch self { case .weight(let e): e.date; case .dose(let e): e.date } }
+    var kind: String { switch self { case .weight: "Weight"; case .dose: "Doses" } }
 }
 
 struct JournalView: View {
     @Environment(Store.self) private var store
     @State private var weight: WeightEntry?
     @State private var dose: DoseEntry?
-    @State private var checkIn: CheckIn?
     @State private var deleting: HistoryEntry?
     @State private var adding: String?
     @State private var filter = "All"
     private var entries: [HistoryEntry] {
-        (store.journal.weights.map(HistoryEntry.weight) + store.journal.doses.map(HistoryEntry.dose) + store.journal.checkIns.map(HistoryEntry.checkIn))
+        (store.journal.weights.map(HistoryEntry.weight) + store.journal.doses.map(HistoryEntry.dose))
             .filter { filter == "All" || $0.kind == filter }.sorted { $0.date > $1.date }
     }
     private var days: [Date] { Array(Set(entries.map { Calendar.current.startOfDay(for: $0.date) })).sorted(by: >) }
@@ -24,36 +23,37 @@ struct JournalView: View {
         NavigationStack {
             List {
                 Section {
-                    FilterBar(selection: $filter, options: ["All", "Doses", "Weight", "Check-ins"].map { ($0, $0) })
+                    FilterBar(selection: $filter, options: ["All", "Doses", "Weight"].map { ($0, $0) })
                 }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 ForEach(days, id: \.self) { day in
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(entries.filter { Calendar.current.isDate($0.date, inSameDayAs: day) }) { entry in
                             Button { edit(entry) } label: { row(entry) }.buttonStyle(.plain)
-                                .swipeActions(allowsFullSwipe: false) { Button("Delete", role: .destructive) { deleting = entry }.tint(.red) }
+                                .disabled(entry.isHealthKitWeight)
+                                .swipeActions(allowsFullSwipe: false) {
+                                    if !entry.isHealthKitWeight { Button("Delete", role: .destructive) { deleting = entry }.tint(.red) }
+                                }
                         }
                     }
                 }
-                if entries.isEmpty { ContentUnavailableView("No entries yet", systemImage: "book.closed", description: Text("Your doses, weights and check-ins appear here.")) }
+                if entries.isEmpty { ContentUnavailableView("No entries yet", systemImage: "book.closed", description: Text("Your doses and weights appear here.")) }
             }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Journal")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" }; Button("Check-in") { adding = "Check-in" } } label: { Image(systemName: "plus") }.accessibilityLabel("Add entry")
+                        Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" } } label: { Image(systemName: "plus") }.accessibilityLabel("Add entry")
                     }
                 }
                 .sheet(isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } })) {
-                    if adding == "Weight" { WeightEditor() } else if adding == "Dose" { DoseEditor() } else { CheckInEditor() }
+                    if adding == "Weight" { WeightEditor() } else { DoseEditor() }
                 }
                 .sheet(item: $weight) { WeightEditor(entry: $0) }
                 .sheet(item: $dose) { DoseEditor(entry: $0) }
-                .sheet(item: $checkIn) { CheckInEditor(entry: $0) }
                 .alert("Delete this entry?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
                     Button("Delete entry", role: .destructive) {
                         guard let deleting else { return }
                         switch deleting {
                         case .weight(let e): store.delete(weight: e)
                         case .dose(let e): store.delete(dose: e)
-                        case .checkIn(let e): var next = store.journal; next.checkIns.removeAll { $0.id == e.id }; _ = store.commit(next)
                         }
                         self.deleting = nil
                     }
@@ -61,7 +61,7 @@ struct JournalView: View {
         }
     }
     private func edit(_ entry: HistoryEntry) {
-        switch entry { case .weight(let e): weight = e; case .dose(let e): dose = e; case .checkIn(let e): checkIn = e }
+        switch entry { case .weight(let e): weight = e; case .dose(let e): dose = e }
     }
     private func row(_ entry: HistoryEntry) -> some View {
         HStack(spacing: 14) {
@@ -71,10 +71,7 @@ struct JournalView: View {
                 details(title: e.status == .skipped ? "Skipped · \(e.medication)" : "\(number(e.milligrams, digits: 3)) mg · \(e.medication)", subtitle: e.status.rawValue.capitalized, note: e.note)
             case .weight(let e):
                 Image(systemName: "scalemass.fill").foregroundStyle(Theme.aqua).font(.title2)
-                details(title: "\(number(store.journal.unit.display(e.kilograms))) \(store.journal.unit.symbol)", subtitle: e.date > Date() ? "Planned weight" : "Weight", note: e.note)
-            case .checkIn(let e):
-                Image(systemName: "face.smiling").foregroundStyle(.orange).font(.title2)
-                details(title: "Check-in", subtitle: [e.appetite.map { "Appetite \($0)/5" }, e.nausea.map { "Nausea \($0)/5" }].compactMap { $0 }.joined(separator: " · "), note: e.note)
+                details(title: "\(number(store.journal.unit.display(e.kilograms))) \(store.journal.unit.symbol)", subtitle: e.healthKitID == nil ? (e.date > Date() ? "Planned weight" : "Weight") : "Apple Health · \(e.sourceName ?? "Imported")", note: e.note)
             }
             Spacer(minLength: 4)
             Text(entry.date, format: .dateTime.hour().minute()).font(.caption2).foregroundStyle(.secondary)
@@ -88,9 +85,14 @@ struct JournalView: View {
         }
     }
 }
+private extension HistoryEntry {
+    var isHealthKitWeight: Bool {
+        if case .weight(let entry) = self { return entry.healthKitID != nil }
+        return false
+    }
+}
 struct SettingsView: View {
     @Environment(Store.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var schedule = false
     @State private var treatment = false
     @State private var addingVial = false
@@ -104,12 +106,21 @@ struct SettingsView: View {
                     Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
                 }
                 Section {
-                    Picker("Decimal places", selection: Binding(get: { store.journal.liveDecimalPlaces }, set: { var next = store.journal; next.liveDecimalPlaces = $0; _ = store.commit(next) })) { ForEach(3...7, id: \.self) { Text("\($0)").tag($0) } }
-                } header: { Text("Live estimate") } footer: { Text("Extra digits show the calculation changing, not greater medical accuracy.") }
+                    Button {
+                        Task { await store.connectHealthKit() }
+                    } label: {
+                        HStack {
+                            Label(store.journal.healthKitWeightsEnabled ? "Sync body weight" : "Connect Apple Health", systemImage: "heart.fill")
+                            Spacer()
+                            if store.journal.healthKitWeightsEnabled { Image(systemName: "arrow.clockwise").foregroundStyle(.secondary) }
+                        }
+                    }
+                    if store.journal.healthKitWeightsEnabled { LabeledContent("Status", value: store.healthKitStatus) }
+                } header: { Text("Apple Health") }
                 Section {
                     NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
                 } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
-            }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { dismiss() } }
+            }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
                 .sheet(isPresented: $treatment) { DosePreferencesEditor() }
                 .sheet(isPresented: $addingVial) { VialEditor() }

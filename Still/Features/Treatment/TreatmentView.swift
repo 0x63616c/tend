@@ -34,13 +34,15 @@ struct TreatmentView: View {
                     ForEach(store.journal.vials.sorted { $0.received > $1.received }) { vial in
                         Button { selectedVial = vial } label: { VialSummary(vial: vial) }.buttonStyle(.plain)
                     }
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Dose history").font(.headline)
-                        HStack { LabeledContent("Taken", value: "\(taken.count)"); Spacer(); Text("\(number(taken.reduce(0) { $0 + $1.milligrams }, digits: 2)) mg logged").font(.caption).foregroundStyle(.secondary) }
-                        ForEach(taken.prefix(4)) { dose in
-                            HStack { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green); Text(dose.date, format: .dateTime.month(.abbreviated).day()); Spacer(); Text("\(number(dose.milligrams, digits: 3)) mg").monospacedDigit() }.font(.subheadline)
-                        }
-                    }.card()
+                    if !taken.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Dose history").font(.headline)
+                            HStack { LabeledContent("Taken", value: "\(taken.count)"); Spacer(); Text("\(number(taken.reduce(0) { $0 + $1.milligrams }, digits: 2)) mg logged").font(.caption).foregroundStyle(.secondary) }
+                            ForEach(taken.prefix(4)) { dose in
+                                HStack { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green); Text(dose.date, format: .dateTime.month(.abbreviated).day()); Spacer(); Text("\(number(dose.milligrams, digits: 3)) mg").monospacedDigit() }.font(.subheadline)
+                            }
+                        }.card()
+                    }
                 }.padding(16)
             }.background(Theme.background).navigationTitle("Treatment")
                 .sheet(isPresented: $editing) { TreatmentEditor() }

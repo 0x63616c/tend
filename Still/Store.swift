@@ -5,9 +5,11 @@ import UserNotifications
     var journal = Journal()
     var error: String?
     var reminderStatus = "Off"
+    var healthKitStatus = "Not connected"
     let demo: Bool
     private var canWrite = true
     private let file: JournalFile
+    var analyticsWeights: [WeightEntry] { journal.weights.resolvedForAnalytics }
     init() {
         demo = ProcessInfo.processInfo.arguments.contains("--demo")
         let root = URL.applicationSupportDirectory.appendingPathComponent("Still", isDirectory: true)
@@ -34,6 +36,29 @@ import UserNotifications
         next.weights.removeAll { $0.id == weight.id }; next.weights.append(weight)
         return commit(next)
     }
+    func connectHealthKit() async {
+        do {
+            let imported = try await HealthKitWeightStore.requestAndFetch()
+            var next = journal
+            next.healthKitWeightsEnabled = true
+            next.weights.removeAll { $0.healthKitID != nil }
+            next.weights.append(contentsOf: imported)
+            if commit(next) { healthKitStatus = imported.isEmpty ? "No weights available" : "Synced \(imported.count) weights" }
+        } catch {
+            healthKitStatus = "Could not sync"
+            self.error = error.localizedDescription
+        }
+    }
+    func refreshHealthKit() async {
+        guard journal.healthKitWeightsEnabled else { return }
+        do {
+            let imported = try await HealthKitWeightStore.fetch()
+            var next = journal
+            next.weights.removeAll { $0.healthKitID != nil }
+            next.weights.append(contentsOf: imported)
+            if commit(next) { healthKitStatus = imported.isEmpty ? "No weights available" : "Synced \(imported.count) weights" }
+        } catch { healthKitStatus = "Could not sync" }
+    }
     func save(dose: DoseEntry, inputUnit: String? = nil) -> Bool {
         do { try dose.validate(now: Date()) } catch { self.error = error.localizedDescription; return false }
         var next = journal
@@ -43,22 +68,8 @@ import UserNotifications
     }
     @discardableResult func delete(weight: WeightEntry) -> Bool { var next = journal; next.weights.removeAll { $0.id == weight.id }; return commit(next) }
     @discardableResult func delete(dose: DoseEntry) -> Bool { var next = journal; next.doses.removeAll { $0.id == dose.id }; return commit(next) }
-    static let reminderTitle = "Time for your check-in"
-    static let reminderBody = "Open Tendr to review your schedule and log your dose."
-    func sendTestReminder() async -> String {
-        let center = UNUserNotificationCenter.current()
-        do {
-            guard try await center.requestAuthorization(options: [.alert, .sound]) else {
-                return "Notifications are off in iPhone Settings."
-            }
-            let content = UNMutableNotificationContent()
-            content.title = Self.reminderTitle
-            content.body = Self.reminderBody
-            content.sound = .default
-            try await center.add(UNNotificationRequest(identifier: "tend-preview", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)))
-            return "Leave Tendr to see it in 5 seconds."
-        } catch { return "Could not send a test notification. Try again." }
-    }
+    static let reminderTitle = "A quick reminder"
+    static let reminderBody = "It’s time for your scheduled dose. Open Tendr when you’re ready."
     func syncReminders() async {
         guard !demo else { reminderStatus = "Demo • no notifications"; return }
         let center = UNUserNotificationCenter.current()
@@ -97,9 +108,6 @@ import UserNotifications
         }
         for i in journal.doses.indices where journal.doses[i].date >= journal.vials[0].received {
             journal.doses[i].vialID = journal.vials[0].id
-        }
-        journal.checkIns = (0..<7).map { i in
-            CheckIn(date: today.addingTimeInterval(Double(-i * 2) * 86400), appetite: [3,2,3,4,3,2,4][i], nausea: [1,1,2,1,2,1,1][i])
         }
         return journal
     }

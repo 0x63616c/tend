@@ -32,7 +32,7 @@ struct VialEditor: View {
         NavigationStack {
             Form {
                 Section("Vial details") {
-                    HStack { VialGlyph(fraction: 1); TextField("Medication", text: $medication) }
+                    HStack { Text("Medication"); Spacer(); TextField("Name", text: $medication).multilineTextAlignment(.trailing).accessibilityLabel("Medication") }
                     DatePicker("Received", selection: $received, displayedComponents: .date)
                     HStack { Text("Concentration"); Spacer(); TextField("0", text: $concentration).keyboardType(.decimalPad).multilineTextAlignment(.trailing).accessibilityLabel("Concentration"); Text("mg/mL").foregroundStyle(.secondary) }
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }.alignmentGuide(.listRowSeparatorTrailing) { $0.width }
@@ -69,7 +69,7 @@ struct VialMini: View {
             VialGlyph(fraction: remaining / vial.volumeML)
             Text("\(number(remaining, digits: 2)) mL").font(.system(.subheadline, design: .rounded, weight: .semibold))
             Text("of \(number(vial.volumeML)) mL").font(.caption2).foregroundStyle(.secondary)
-        }.frame(width: 82, height: 132).card()
+        }.frame(width: 82, height: 108).card()
         .accessibilityElement(children: .combine)
     }
 }

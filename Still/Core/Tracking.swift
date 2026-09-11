@@ -5,8 +5,26 @@ public struct WeightEntry: Codable, Identifiable, Equatable, Sendable {
     public var date: Date
     public var kilograms: Double
     public var note: String
-    public init(date: Date, kilograms: Double, note: String = "") {
+    public var healthKitID: UUID?
+    public var sourceName: String?
+    public init(date: Date, kilograms: Double, note: String = "", healthKitID: UUID? = nil, sourceName: String? = nil) {
         self.date = date; self.kilograms = kilograms; self.note = note
+        self.healthKitID = healthKitID; self.sourceName = sourceName
+    }
+}
+
+public extension Array where Element == WeightEntry {
+    /// Keeps every manual entry, while removing an obvious manually copied duplicate
+    /// from charts when Apple Health contains the same reading at the same time.
+    var resolvedForAnalytics: [WeightEntry] {
+        filter { entry in
+            guard entry.healthKitID == nil else { return true }
+            return !contains { health in
+                health.healthKitID != nil
+                    && abs(health.date.timeIntervalSince(entry.date)) <= 60
+                    && abs(health.kilograms - entry.kilograms) <= 0.05
+            }
+        }
     }
 }
 

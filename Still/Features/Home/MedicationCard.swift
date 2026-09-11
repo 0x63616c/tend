@@ -20,7 +20,7 @@ struct MedicationCard: View {
         MedicationLevel.remaining(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: now, model: model)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(store.journal.medication.uppercased()).font(.system(size: 10, weight: .bold)).tracking(1.6).foregroundStyle(Theme.pine)
@@ -35,7 +35,7 @@ struct MedicationCard: View {
                 let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
                 let previousValue = MedicationLevel.remaining(at: timestamp.addingTimeInterval(-1), doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(value.formatted(.number.precision(.fractionLength(selected == nil ? store.journal.liveDecimalPlaces : 3)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
+                    Text(value.formatted(.number.precision(.fractionLength(7)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
                     Text("mg").font(.headline).foregroundStyle(.secondary)
                     if value != previousValue {
                         Image(systemName: value > previousValue ? "arrow.up" : "arrow.down")

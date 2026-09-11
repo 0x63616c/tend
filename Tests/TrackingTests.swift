@@ -2,13 +2,21 @@ import XCTest
 @testable import StillCore
 
 final class TrackingTests: XCTestCase {
+    func testAnalyticsKeepsManualWeightsButCollapsesAnObviousHealthDuplicate() {
+        let date = Date(timeIntervalSince1970: 1_000)
+        let manualDuplicate = WeightEntry(date: date, kilograms: 71.2)
+        let health = WeightEntry(date: date.addingTimeInterval(30), kilograms: 71.21, healthKitID: UUID(), sourceName: "Scale")
+        let separateManual = WeightEntry(date: date.addingTimeInterval(3_600), kilograms: 71.2)
+
+        let resolved = [manualDuplicate, health, separateManual].resolvedForAnalytics
+
+        XCTAssertEqual(resolved, [health, separateManual])
+    }
     func testOlderJournalLoadsWithNewFieldsDefaultedAndFutureSchemaIsRejected() throws {
         let old = Data(#"{"version":1,"weights":[],"doses":[],"medication":"Semaglutide"}"#.utf8)
         let journal = try JSONDecoder().decode(Journal.self, from: old)
-        XCTAssertEqual(journal.checkIns, [])
         XCTAssertEqual(journal.vials, [])
         XCTAssertEqual(journal.halfLifeDays, 7)
-        XCTAssertEqual(journal.liveDecimalPlaces, 5)
         XCTAssertEqual(journal.resolvedMedicationModel, .semaglutide)
         XCTAssertThrowsError(try JSONDecoder().decode(Journal.self, from: Data(#"{"version":999}"#.utf8)))
     }
@@ -133,12 +141,5 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(goal.requiredWeeklyChange(current: 90, now: now), -1)
         XCTAssertNil(WeightGoal(kilograms: 80, date: now).requiredWeeklyChange(current: 90, now: now))
         XCTAssertNil(WeightGoal(kilograms: 80).requiredWeeklyChange(current: 90, now: now))
-    }
-    func testCheckInRequiresAChosenRatingAndOnlyAcceptsOneThroughFive() {
-        XCTAssertFalse(CheckIn(date: Date()).isValid)
-        XCTAssertTrue(CheckIn(date: Date(), appetite: 5).isValid)
-        XCTAssertTrue(CheckIn(date: Date(), nausea: 1).isValid)
-        XCTAssertFalse(CheckIn(date: Date(), appetite: 0, nausea: 1).isValid)
-        XCTAssertFalse(CheckIn(date: Date(), nausea: 6).isValid)
     }
 }

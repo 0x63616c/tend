@@ -8,7 +8,7 @@ settings:
     SWIFT_VERSION: '6.0'
     DEVELOPMENT_TEAM: X9E4HG27NK
     MARKETING_VERSION: '1.0.0'
-    CURRENT_PROJECT_VERSION: '11'
+    CURRENT_PROJECT_VERSION: '12'
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 targets:
   Still:
@@ -18,6 +18,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.calumwebb.still
+        CODE_SIGN_ENTITLEMENTS: Still/Still.entitlements
+        INFOPLIST_KEY_NSHealthShareUsageDescription: Tendr reads your body weight so your progress stays up to date.
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Tendr
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.healthcare-fitness

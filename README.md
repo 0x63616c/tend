@@ -2,9 +2,9 @@
 
 A native, local-first iPhone journal for GLP-1 treatment. Built with SwiftUI and Swift Charts, with no sign-in, tracking SDKs or runtime dependencies.
 
-**Private TestFlight beta: version 1.0.0 (3) is Testing in Owner Preview, with the account holder Invited.**
+Available as a private TestFlight beta.
 
-Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; review progress and estimated medication decay; record appetite and nausea; and choose weekly reminder days. Edit past records and distinguish future plans from actual entries. Discover includes bundled original articles and recipes. The assistant is a coming-soon preview, not a connected AI service.
+Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; import body weight read-only from Apple Health; review progress and estimated medication decay; and choose weekly reminder days. Edit past records and distinguish future plans from actual entries.
 
 Medication curves are simplified half-life estimates, not measured body or blood levels or dosing advice. Historical records retain their medication and concentration. Follow the instructions from your prescriber.
 
@@ -12,7 +12,7 @@ Medication curves are simplified half-life estimates, not measured body or blood
 
 Actual iPhone 17 Pro Max simulator captures using synthetic data.
 
-<p><img src="docs/screenshots/home-dark.png" width="260" alt="Home in dark mode"><img src="docs/screenshots/discover-dark.png" width="260" alt="Discover in dark mode"><img src="docs/screenshots/recipe-dark.png" width="260" alt="Recipe detail"></p>
+<img src="docs/screenshots/home-dark.png" width="260" alt="Home in dark mode">
 
 ## Run
 
@@ -25,7 +25,7 @@ open Still.xcodeproj
 
 Choose the Still scheme and an iPhone simulator. The internal target and bundle identifier still use the earlier project name. For a device build, select your own development team.
 
-Launch with `--demo` for synthetic, in-memory sample data. Demo mode never writes to your health journal or schedules automatic reminders. The explicit test-notification button can send a preview when you request one. `--uitest` selects a separate test journal when used without demo mode.
+Launch with `--demo` for synthetic, in-memory sample data. Demo mode never writes to your health journal or schedules reminders. `--uitest` selects a separate test journal when used without demo mode.
 
 ## Tests
 
@@ -40,7 +40,7 @@ The Swift package tests cover calculations, validation, local calendar schedulin
 
 ## Privacy and storage
 
-The health journal is stored in the app's Application Support directory using atomic file writes. No backend or telemetry is included. Device backups follow iOS settings. Discover content is bundled separately; no personal information is required to read it.
+The health journal is stored in the app's Application Support directory using atomic file writes. Apple Health access is read-only. No backend or telemetry is included. Device backups follow iOS settings.
 
 ## Contributing
 

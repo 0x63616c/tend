@@ -9,15 +9,14 @@ public enum WeightUnit: String, Codable, CaseIterable, Sendable {
 public struct Journal: Codable, Equatable, Sendable {
     public var version = 1
     public var goal: WeightGoal?
-    public var checkIns: [CheckIn] = []
     public var vials: [Vial] = []
     public var doseInputUnit: String?
     public var syringeUnitsPerML: Double?
     public var halfLifeDays: Double = 7
     public var medicationModel: MedicationModel?
     public var resolvedMedicationModel: MedicationModel { medicationModel ?? MedicationModel.inferred(from: medication) }
-    public var liveDecimalPlaces = 5
     public var appearance = "system"
+    public var healthKitWeightsEnabled = false
     public var weights: [WeightEntry] = []
     public var doses: [DoseEntry] = []
     public var medication = "Semaglutide"
@@ -26,21 +25,20 @@ public struct Journal: Codable, Equatable, Sendable {
     public var unit: WeightUnit = .lb
     public var schedule = DoseSchedule()
     public init() {}
-    private enum CodingKeys: String, CodingKey { case medicationModel, liveDecimalPlaces, doseInputUnit, version, goal, checkIns, vials, syringeUnitsPerML, halfLifeDays, appearance, weights, doses, medication, concentration, containerML, unit, schedule }
+    private enum CodingKeys: String, CodingKey { case medicationModel, doseInputUnit, version, goal, vials, syringeUnitsPerML, halfLifeDays, appearance, healthKitWeightsEnabled, weights, doses, medication, concentration, containerML, unit, schedule }
     public init(from decoder: Decoder) throws {
         self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
         version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 1
         guard version == 1 else { throw TrackingError.invalidFile }
         medicationModel = try values.decodeIfPresent(MedicationModel.self, forKey: .medicationModel)
-        liveDecimalPlaces = min(7, max(3, try values.decodeIfPresent(Int.self, forKey: .liveDecimalPlaces) ?? 5))
         doseInputUnit = try values.decodeIfPresent(String.self, forKey: .doseInputUnit)
         if let value = try values.decodeIfPresent(WeightGoal.self, forKey: .goal) { goal = value }
-        if let value = try values.decodeIfPresent([CheckIn].self, forKey: .checkIns) { checkIns = value }
         if let value = try values.decodeIfPresent([Vial].self, forKey: .vials) { vials = value }
         if let value = try values.decodeIfPresent(Double.self, forKey: .syringeUnitsPerML) { syringeUnitsPerML = value }
         if let value = try values.decodeIfPresent(Double.self, forKey: .halfLifeDays) { halfLifeDays = value }
         if let value = try values.decodeIfPresent(String.self, forKey: .appearance) { appearance = value }
+        healthKitWeightsEnabled = try values.decodeIfPresent(Bool.self, forKey: .healthKitWeightsEnabled) ?? false
         if let value = try values.decodeIfPresent([WeightEntry].self, forKey: .weights) { weights = value }
         if let value = try values.decodeIfPresent([DoseEntry].self, forKey: .doses) { doses = value }
         if let value = try values.decodeIfPresent(String.self, forKey: .medication) { medication = value }

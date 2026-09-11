@@ -8,14 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		01A20BFD238D2EFD9811910E /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033134A7B3BB4B6F478EA308 /* Journal.swift */; };
-		119DCEA83562E277F719DB19 /* NotificationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */; };
 		1878A28B539F99DD562844CC /* StillUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76AB8C929B38B5C4144D9B93 /* StillUITests.swift */; };
-		2FD16E699C53DE49D376AAE6 /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE015459D9012AC01CCB817 /* CheckInView.swift */; };
 		3140DE520D3F985B4C17E938 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88C298B25AA8A1BB4ECED06C /* RootView.swift */; };
 		3157D1456611C3680162E340 /* GoalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B2E4421F97B007948FB5D9 /* GoalView.swift */; };
 		3CD4A7C29B6D56C13CBAE5BC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5B2539898EB583763A28A42 /* Assets.xcassets */; };
 		3D74D214CB3686FCADF7C2FA /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662E21DA06EBAF4ACE103502 /* DiscoverView.swift */; };
-		3D93F1753929C346DC2881EE /* CheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C633FA99EE68EF07BF980F /* CheckIn.swift */; };
+		424F9B28AA57366C1B375868 /* HealthKitWeightStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E0EFE505FE380DEF4BEB01 /* HealthKitWeightStore.swift */; };
 		4322E19FD46674AFE347A37C /* Editors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087DBA256BFFEE06713F93D /* Editors.swift */; };
 		5143590FA51C5A4C25D3EA51 /* EntryValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C02DC719DFE58F082CE559 /* EntryValidation.swift */; };
 		54A3F4BEE4EC1464A9F6E37B /* MedicationLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */; };
@@ -44,8 +42,7 @@
 
 /* Begin PBXFileReference section */
 		033134A7B3BB4B6F478EA308 /* Journal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Journal.swift; sourceTree = "<group>"; };
-		08C633FA99EE68EF07BF980F /* CheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckIn.swift; sourceTree = "<group>"; };
-		0CE015459D9012AC01CCB817 /* CheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInView.swift; sourceTree = "<group>"; };
+		03E0EFE505FE380DEF4BEB01 /* HealthKitWeightStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitWeightStore.swift; sourceTree = "<group>"; };
 		14C4753ACE9F975EC7EF42BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		17C74C889016FEBBA601994F /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
 		193593C1E058E2D289F796C2 /* Still.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Still.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -53,7 +50,6 @@
 		25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationLevel.swift; sourceTree = "<group>"; };
 		3B5DF07AF9BACBF2DFAEE064 /* StillApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StillApp.swift; sourceTree = "<group>"; };
 		442027E54FD77E3C6477DD6F /* AssistantPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPreview.swift; sourceTree = "<group>"; };
-		52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreview.swift; sourceTree = "<group>"; };
 		662E21DA06EBAF4ACE103502 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
 		66C02DC719DFE58F082CE559 /* EntryValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryValidation.swift; sourceTree = "<group>"; };
 		70A255FAD4D2F211E5EA8D78 /* Tracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tracking.swift; sourceTree = "<group>"; };
@@ -67,6 +63,7 @@
 		E6B2E4421F97B007948FB5D9 /* GoalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalView.swift; sourceTree = "<group>"; };
 		EE7C6EB976A31E0351C41446 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		F91707FF75831793AF9F34D2 /* Vial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vial.swift; sourceTree = "<group>"; };
+		FB03B665E58BD3106E23CE0D /* Still.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Still.entitlements; sourceTree = "<group>"; };
 		FE8E9F8D5F9A8A8CADA99485 /* VialViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VialViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,7 +89,9 @@
 			isa = PBXGroup;
 			children = (
 				D5B2539898EB583763A28A42 /* Assets.xcassets */,
+				03E0EFE505FE380DEF4BEB01 /* HealthKitWeightStore.swift */,
 				14C4753ACE9F975EC7EF42BA /* PrivacyInfo.xcprivacy */,
+				FB03B665E58BD3106E23CE0D /* Still.entitlements */,
 				3B5DF07AF9BACBF2DFAEE064 /* StillApp.swift */,
 				EE7C6EB976A31E0351C41446 /* Store.swift */,
 				234F336CB0C1CBD580FBC97C /* Core */,
@@ -104,7 +103,6 @@
 		234F336CB0C1CBD580FBC97C /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				08C633FA99EE68EF07BF980F /* CheckIn.swift */,
 				66C02DC719DFE58F082CE559 /* EntryValidation.swift */,
 				033134A7B3BB4B6F478EA308 /* Journal.swift */,
 				25CCB5F8523EE87381CD1978 /* MedicationLevel.swift */,
@@ -165,7 +163,6 @@
 		B246576C00ECB04299C54DC7 /* Treatment */ = {
 			isa = PBXGroup;
 			children = (
-				52F60F779DEBAF0178376BC3 /* NotificationPreview.swift */,
 				17C74C889016FEBBA601994F /* TreatmentView.swift */,
 				FE8E9F8D5F9A8A8CADA99485 /* VialViews.swift */,
 			);
@@ -175,7 +172,6 @@
 		FB260A79805A3451CCFBD77A /* Journal */ = {
 			isa = PBXGroup;
 			children = (
-				0CE015459D9012AC01CCB817 /* CheckInView.swift */,
 				2087DBA256BFFEE06713F93D /* Editors.swift */,
 				94A35FC06520E46B3E0B1274 /* JournalView.swift */,
 			);
@@ -277,17 +273,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				9D9BBA82477A78A62E3E8CFC /* AssistantPreview.swift in Sources */,
-				3D93F1753929C346DC2881EE /* CheckIn.swift in Sources */,
-				2FD16E699C53DE49D376AAE6 /* CheckInView.swift in Sources */,
 				3D74D214CB3686FCADF7C2FA /* DiscoverView.swift in Sources */,
 				4322E19FD46674AFE347A37C /* Editors.swift in Sources */,
 				5143590FA51C5A4C25D3EA51 /* EntryValidation.swift in Sources */,
 				3157D1456611C3680162E340 /* GoalView.swift in Sources */,
+				424F9B28AA57366C1B375868 /* HealthKitWeightStore.swift in Sources */,
 				01A20BFD238D2EFD9811910E /* Journal.swift in Sources */,
 				5833A4D6715DD9868B0D6652 /* JournalView.swift in Sources */,
 				E13D4453B9589D60BEA30624 /* MedicationCard.swift in Sources */,
 				54A3F4BEE4EC1464A9F6E37B /* MedicationLevel.swift in Sources */,
-				119DCEA83562E277F719DB19 /* NotificationPreview.swift in Sources */,
 				3140DE520D3F985B4C17E938 /* RootView.swift in Sources */,
 				ADC60342778EA19EB546C959 /* StillApp.swift in Sources */,
 				8977D2CCBBFBC92F397AFA6C /* Store.swift in Sources */,
@@ -369,7 +363,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X9E4HG27NK;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -406,11 +400,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Still/Still.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Tendr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Tendr reads your body weight so your progress stays up to date.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -475,7 +471,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = X9E4HG27NK;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -505,11 +501,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Still/Still.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Tendr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Tendr reads your body weight so your progress stays up to date.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;

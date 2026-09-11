@@ -3,6 +3,7 @@ import Charts
 
 struct RootView: View {
     @Environment(Store.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selected = 0
     var body: some View {
         @Bindable var store = store
@@ -11,7 +12,7 @@ struct RootView: View {
             TreatmentView().toolbar(.hidden, for: .tabBar).tag(1).tabItem { Label("Treatment", systemImage: "syringe.fill") }
             ProgressViewScreen().toolbar(.hidden, for: .tabBar).tag(2).tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }
             JournalView().toolbar(.hidden, for: .tabBar).tag(3).tabItem { Label("Journal", systemImage: "book.closed") }
-            DiscoverView().toolbar(.hidden, for: .tabBar).tag(4).tabItem { Label("Discover", systemImage: "safari") }
+            SettingsView().toolbar(.hidden, for: .tabBar).tag(4).tabItem { Label("Settings", systemImage: "gearshape") }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
@@ -21,7 +22,7 @@ struct RootView: View {
                     navigationItem("Treatment", icon: "syringe", index: 1)
                     navigationItem("Progress", icon: "chart.xyaxis.line", index: 2)
                     navigationItem("Journal", icon: "book.closed", index: 3)
-                    navigationItem("Discover", icon: "safari", index: 4)
+                    navigationItem("Settings", icon: "gearshape", index: 4)
                 }.padding(.horizontal, 8).padding(.top, 6).padding(.bottom, 2)
             }.background(Theme.background)
         }
@@ -30,6 +31,9 @@ struct RootView: View {
         } message: { Text(store.error ?? "") }
         .preferredColorScheme(store.journal.appearance == "dark" ? .dark : store.journal.appearance == "light" ? .light : nil)
         .task { await store.syncReminders() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await store.refreshHealthKit() } }
+        }
     }
     private func navigationItem(_ title: String, icon: String, index: Int) -> some View {
         Button { selected = index } label: {
@@ -50,23 +54,16 @@ struct TodayView: View {
     @State private var weightSheet = false
     @State private var doseSheet = false
     @State private var scheduleSheet = false
-    @State private var settingsSheet = false
     @State private var weightDetail = false
     @State private var vialSheet = false
-    var summary: WeightSummary { WeightSummary(entries: store.journal.weights, now: Date()) }
+    var summary: WeightSummary { WeightSummary(entries: store.analyticsWeights, now: Date()) }
     var overdue: Date? { store.journal.schedule.outstanding(asOf: Date(), doses: store.journal.doses).first }
     var nextDate: Date? { overdue ?? store.journal.schedule.occurrences(after: Date(), count: 1).first }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .center) {
-                        Text("Tendr").font(.largeTitle.bold())
-                        Spacer()
-                        Button { settingsSheet = true } label: {
-                            Image(systemName: "gearshape").font(.title2)
-                        }.accessibilityLabel("Settings")
-                    }.padding(.horizontal, 8)
+                    Text("Tendr").font(.largeTitle.bold()).padding(.horizontal, 8)
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
@@ -81,10 +78,10 @@ struct TodayView: View {
                                 }.frame(minHeight: 54)
                             } else { Button("Set your schedule") { scheduleSheet = true }.font(.headline) }
                             Button { doseSheet = true } label: { Label("Log dose", systemImage: "plus").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 3) }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("logDose")
-                        }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 132).card()
+                        }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 108).card()
                         Button { vialSheet = true } label: {
                             if let vial = store.journal.vials.sorted(by: { $0.received > $1.received }).first { VialMini(vial: vial) }
-                            else { VStack(spacing: 12) { Image(systemName: "plus").font(.title2); Text("Add vial").font(.caption.weight(.semibold)) }.frame(width: 82, height: 132).card() }
+                            else { VStack(spacing: 12) { Image(systemName: "plus").font(.title2); Text("Add vial").font(.caption.weight(.semibold)) }.frame(width: 82, height: 108).card() }
                         }.buttonStyle(.plain).accessibilityLabel("Vial details")
                     }
                     MedicationCard()
@@ -96,37 +93,43 @@ struct TodayView: View {
                         }
                         HStack(alignment: .center, spacing: 24) {
                             VStack(alignment: .leading, spacing: 5) {
-                                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                    Text(summary.latest.map { number(store.journal.unit.display($0)) } ?? "—").font(.system(size: 32, weight: .bold, design: .rounded))
-                                    Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
+                                if let latest = summary.latest {
+                                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                        Text(number(store.journal.unit.display(latest))).font(.system(size: 32, weight: .bold, design: .rounded))
+                                        Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
+                                    }
+                                } else {
+                                    Text("No data").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
                                 }
                                 Text("Latest").font(.caption).foregroundStyle(.secondary)
                             }
-                            WeightChart(entries: store.journal.weights.filter { $0.date <= Date() }, unit: store.journal.unit, compact: true).frame(height: 65)
+                            WeightChart(entries: store.analyticsWeights.filter { $0.date <= Date() }, unit: store.journal.unit, compact: true).frame(height: 65)
                         }
                         Divider()
                         HStack {
-                            stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", suffix: store.journal.unit.symbol)
+                            stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) }, suffix: store.journal.unit.symbol)
                             Spacer(); Divider().frame(height: 32); Spacer()
-                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", suffix: store.journal.unit.symbol, alignment: .trailing)
+                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) }, suffix: store.journal.unit.symbol, alignment: .trailing)
                         }
                     }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle()).onTapGesture { weightDetail = true }
-                    CheckInCard()
 
                 }.padding(.horizontal, 16).padding(.bottom, 24)
             }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $weightSheet) { WeightEditor() }
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
                 .sheet(isPresented: $scheduleSheet) { ScheduleEditor() }
-                .sheet(isPresented: $settingsSheet) { SettingsView() }
                 .sheet(isPresented: $weightDetail) { ProgressViewScreen(isSheet: true) }
                 .sheet(isPresented: $vialSheet) { VialEditor(vial: store.journal.vials.sorted { $0.received > $1.received }.first) }
         }
     }
-    func stat(title: String, value: String, suffix: String, alignment: HorizontalAlignment = .leading) -> some View {
+    func stat(title: String, value: String?, suffix: String, alignment: HorizontalAlignment = .leading) -> some View {
         VStack(alignment: alignment, spacing: 4) {
             Text(title).font(.caption).foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value).font(.system(.title3, design: .rounded, weight: .semibold)); Text(suffix).font(.caption).foregroundStyle(.secondary) }
+            if let value {
+                HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value).font(.system(.title3, design: .rounded, weight: .semibold)); Text(suffix).font(.caption).foregroundStyle(.secondary) }
+            } else {
+                Text("No data").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -166,14 +169,13 @@ struct ProgressViewScreen: View {
     @Environment(Store.self) private var store
     @State private var range = 90
     @State private var adding = false
-    var entries: [WeightEntry] { store.journal.weights.filter { $0.date <= Date() && (range == 0 || $0.date >= Calendar.current.date(byAdding: .day, value: -range, to: Date())!) }.sorted { $0.date < $1.date } }
+    var entries: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() && (range == 0 || $0.date >= Calendar.current.date(byAdding: .day, value: -range, to: Date())!) }.sorted { $0.date < $1.date } }
     var summary: WeightSummary { WeightSummary(entries: entries, now: Date()) }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     GoalCard()
-                    CheckInTrends()
                     Text("Weight").font(.title.bold())
                     FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year"), (0, "All")])
                     VStack(alignment: .leading, spacing: 20) {
@@ -184,8 +186,8 @@ struct ProgressViewScreen: View {
                         } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your trend.")) }
                     }.card()
                     HStack(spacing: 14) {
-                        metric(title: (summary.lost ?? 0) >= 0 ? "Weight lost" : "Weight gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) } ?? "—", foot: store.journal.unit.symbol, icon: "arrow.down.right")
-                        metric(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) } ?? "—", foot: "\(store.journal.unit.symbol) / week", icon: "waveform.path")
+                        metric(title: (summary.lost ?? 0) >= 0 ? "Weight lost" : "Weight gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) }, foot: store.journal.unit.symbol, icon: "arrow.down.right")
+                        metric(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) }, foot: "\(store.journal.unit.symbol) / week", icon: "waveform.path")
                     }
                     if let first = entries.first, let lost = summary.lost {
                         HStack { Image(systemName: "circle.lefthalf.filled").foregroundStyle(Theme.pine); Text("\(number(abs(lost) / first.kilograms * 100))% \(lost >= 0 ? "decrease" : "increase") over this period").font(.subheadline) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(Theme.sage, in: RoundedRectangle(cornerRadius: 20))
@@ -200,13 +202,17 @@ struct ProgressViewScreen: View {
                 .sheet(isPresented: $adding) { WeightEditor() }
         }
     }
-    func metric(title: String, value: String, foot: String, icon: String) -> some View {
+    func metric(title: String, value: String?, foot: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon).foregroundStyle(Theme.pine)
             Text(title).font(.caption).foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
-                Text(foot).font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+            if let value {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
+                    Text(foot).font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+                }
+            } else {
+                Text("No data").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
             }
         }.frame(maxWidth: .infinity, alignment: .leading).card()
     }

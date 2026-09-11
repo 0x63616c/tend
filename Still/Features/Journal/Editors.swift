@@ -168,7 +168,6 @@ struct ScheduleEditor: View {
     @State private var days: Set<Int> = []
     @State private var time = Date()
     @State private var reminders = false
-    @State private var previewStatus: String?
     var body: some View {
         NavigationStack {
             Form {
@@ -178,16 +177,6 @@ struct ScheduleEditor: View {
                     }.accessibilityAddTraits(days.contains(day) ? .isSelected : [])
                 } } header: { Text("Days of the week") } footer: { Text("Choose the days in your prescribed schedule. Your actual dose dates can be logged separately.") }
                 Section("Reminders") { Toggle("Remind me", isOn: $reminders); if reminders { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute) } }
-                if reminders {
-                    Section {
-                        NotificationPreview(time: time)
-                            .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-                        Button("Send test notification") {
-                            Task { previewStatus = await store.sendTestReminder() }
-                        }
-                        if let previewStatus { Text(previewStatus).font(.caption).foregroundStyle(.secondary) }
-                    } header: { Text("Notification preview") }
-                }
             }.navigationTitle("Your schedule").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") {
                     var next = store.journal; next.schedule.weekdays = days; next.schedule.hour = Calendar.current.component(.hour, from: time); next.schedule.minute = Calendar.current.component(.minute, from: time); next.schedule.enabled = reminders

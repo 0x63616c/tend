@@ -22,13 +22,10 @@ final class StillUITests: XCTestCase {
         capture("Progress")
         app.buttons["navJournal"].tap()
         capture("Journal")
-        app.buttons["navDiscover"].tap()
-        XCTAssertTrue(app.staticTexts["READ. COOK. RESET."].waitForExistence(timeout: 3))
-        capture("Discover")
-        app.buttons["Recipes"].tap()
-        app.staticTexts["The five-minute\nyogurt bowl"].tap()
-        XCTAssertTrue(app.staticTexts["Ingredients"].waitForExistence(timeout: 3))
-        capture("Recipe")
+        app.buttons["navSettings"].tap()
+        XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Connect Apple Health"].exists)
+        capture("Settings")
         app.buttons["navHome"].tap()
     }
     @MainActor func testPolishedFiltersAndVials() {
@@ -58,14 +55,10 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Year"].isSelected)
         capture("Polish Progress")
     }
-    @MainActor func testLivePrecisionPersists() {
+    @MainActor func testLivePrecisionIsAlwaysSevenDecimals() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitest", "--reset-test-journal"]
         app.launch()
-        app.buttons["Settings"].tap()
-        app.buttons["Decimal places, 5"].tap()
-        app.buttons["7"].tap()
-        app.buttons["Done"].tap()
         XCTAssertEqual(app.staticTexts["liveMedicationAmount"].label, "0.0000000")
         app.terminate()
         app.launchArguments = ["--uitest"]
@@ -76,12 +69,11 @@ final class StillUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--uitest", "--reset-test-journal"]
         app.launch()
-        app.buttons["Settings"].tap()
+        app.buttons["navSettings"].tap()
         app.buttons["Dose entry"].tap()
         app.segmentedControls.buttons["Units"].tap()
         app.switches["I use a U-100 syringe"].tap()
         app.buttons["Save"].tap()
-        app.buttons["Done"].tap()
         app.terminate()
         app.launchArguments = ["--uitest"]
         app.launch()
@@ -126,10 +118,9 @@ final class StillUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
         app.launch()
-        app.buttons["Settings"].tap()
+        app.buttons["navSettings"].tap()
         app.buttons["Weight unit, lbs"].tap()
         app.buttons["kg"].tap()
-        app.buttons["Done"].tap()
         app.buttons["navJournal"].tap()
         app.staticTexts["88.5 kg"].tap()
         XCTAssertEqual(app.textFields["weightAmount"].value as? String, "88.5")
@@ -165,6 +156,7 @@ final class StillUITests: XCTestCase {
         field.tap()
         field.typeText("0.5")
         app.buttons["saveDose"].tap()
+        XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 3))
         app.buttons["navJournal"].tap()
         let record = app.staticTexts["0.5 mg · Semaglutide"]
         XCTAssertTrue(record.waitForExistence(timeout: 5))
@@ -179,22 +171,18 @@ final class StillUITests: XCTestCase {
         app.buttons["navJournal"].tap()
         XCTAssertTrue(app.staticTexts["Skipped · Semaglutide"].waitForExistence(timeout: 5))
     }
-    @MainActor func testReminderPreviewIsConditionalAndDeliversANotification() {
+    @MainActor func testReminderTimeIsConditionalWithoutPreview() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitest", "--reset-test-journal"]
         app.launch()
         app.buttons["navTreatment"].tap()
         app.buttons["editSchedule"].tap()
+        XCTAssertFalse(app.staticTexts["Time"].exists)
         XCTAssertFalse(app.buttons["Send test notification"].exists)
         app.switches["Remind me"].switches.firstMatch.tap()
-        app.swipeUp()
-        XCTAssertTrue(app.buttons["Send test notification"].waitForExistence(timeout: 3))
-        app.buttons["Send test notification"].tap()
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        if springboard.buttons["Allow"].waitForExistence(timeout: 3) { springboard.buttons["Allow"].tap() }
-        XCUIDevice.shared.press(.home)
-        XCTAssertTrue(springboard.staticTexts["Time for your check-in"].waitForExistence(timeout: 15))
-        capture("Actual reminder notification")
+        XCTAssertTrue(app.staticTexts["Time"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Notification preview"].exists)
+        XCTAssertFalse(app.buttons["Send test notification"].exists)
     }
     @MainActor func testHomeGraphsOpenDetailsAndCanBeClosed() {
         let app = XCUIApplication()
@@ -210,29 +198,6 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Progress"].waitForExistence(timeout: 5))
         app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["logDose"].exists)
-    }
-    @MainActor func testJournalCanAddEditAndDeleteCheckIn() {
-        let app = XCUIApplication()
-        app.launchArguments = ["--uitest", "--reset-test-journal"]
-        app.launch()
-        app.buttons["navJournal"].tap()
-        XCTAssertTrue(app.buttons["Add entry"].waitForExistence(timeout: 5))
-        app.buttons["Add entry"].tap()
-        app.buttons["Check-in"].tap()
-        app.buttons["Appetite 3 of 5"].tap()
-        app.buttons["Save Check-in"].tap()
-        app.staticTexts["Appetite 3/5"].tap()
-        app.buttons["Delete entry"].tap()
-        app.alerts.buttons["Cancel"].tap()
-        XCTAssertTrue(app.buttons["Save Check-in"].exists)
-        app.buttons["Delete entry"].tap()
-        app.alerts.buttons["Delete"].tap()
-        XCTAssertTrue(app.staticTexts["No entries yet"].waitForExistence(timeout: 5))
-        app.terminate()
-        app.launchArguments = ["--uitest"]
-        app.launch()
-        app.buttons["navJournal"].tap()
-        XCTAssertTrue(app.staticTexts["No entries yet"].exists)
     }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

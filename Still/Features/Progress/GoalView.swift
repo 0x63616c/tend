@@ -3,7 +3,7 @@ import SwiftUI
 struct GoalCard: View {
     @Environment(Store.self) private var store
     @State private var editing = false
-    var actual: [WeightEntry] { store.journal.weights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
+    var actual: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
     var body: some View {
         Button { editing = true } label: {
             VStack(alignment: .leading, spacing: 14) {
@@ -28,7 +28,7 @@ struct GoalEditor: View {
     @State private var hasDate = false
     @State private var date = Calendar.current.date(byAdding: .month, value: 3, to: Date())!
     var goal: WeightGoal? { guard let value = parse(amount), EntryValidation.weight(store.journal.unit.kilograms(value)) else { return nil }; return WeightGoal(kilograms: store.journal.unit.kilograms(value), date: hasDate ? date : nil) }
-    var actual: [WeightEntry] { store.journal.weights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
+    var actual: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
     var body: some View {
         NavigationStack {
             Form {
