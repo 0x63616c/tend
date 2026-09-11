@@ -20,6 +20,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.calumwebb.still
         CODE_SIGN_ENTITLEMENTS: Still/Still.entitlements
         INFOPLIST_KEY_NSHealthShareUsageDescription: Tendr reads your body weight so your progress stays up to date.
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: Tendr does not write data to Apple Health. Body weight access is read-only.
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Tendr
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.healthcare-fitness
