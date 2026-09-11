@@ -60,6 +60,13 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center) {
+                        Text("Tendr").font(.largeTitle.bold())
+                        Spacer()
+                        Button { settingsSheet = true } label: {
+                            Image(systemName: "gearshape").font(.title2)
+                        }.accessibilityLabel("Settings")
+                    }.padding(.horizontal, 8)
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
@@ -107,8 +114,7 @@ struct TodayView: View {
                     CheckInCard()
 
                 }.padding(.horizontal, 16).padding(.bottom, 24)
-            }.background(Theme.background).navigationTitle("Tendr").navigationBarTitleDisplayMode(.large)
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { settingsSheet = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Settings") } }
+            }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $weightSheet) { WeightEditor() }
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
                 .sheet(isPresented: $scheduleSheet) { ScheduleEditor() }
