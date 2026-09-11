@@ -18,9 +18,13 @@ private_lane :connect_api_key do
 end
 
 platform :ios do
-  desc "Run the core and simulator UI tests"
+  desc "Run the fast core test suite"
   lane :verify do
     sh("swift", "test")
+  end
+
+  desc "Run the full end-to-end simulator suite when UI behavior changes"
+  lane :ui do
     run_tests(
       project: "Still.xcodeproj",
       scheme: "Still",

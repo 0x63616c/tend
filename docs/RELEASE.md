@@ -2,7 +2,7 @@
 
 September 11, 2026: build 12 uploaded successfully and Apple confirmed processing completed. Assignment to the existing **Owner Preview** internal group still needs direct verification; processing alone does not prove tester availability.
 
-Future releases use the checked-in Fastlane lanes: `verify` runs the core and simulator UI tests, `beta` builds and uploads the next build then waits and assigns it to Owner Preview, and `distribute_existing` assigns a processed build without rebuilding it. App Store Connect API-key values are supplied at runtime and never committed.
+Future releases use the checked-in Fastlane lanes: `verify` runs the fast core suite, `ui` runs the full simulator flow suite when UI behavior changes, `beta` verifies then builds and uploads the next build before waiting and assigning it to Owner Preview, and `distribute_existing` assigns a processed build without rebuilding it. App Store Connect API-key values are supplied at runtime and never committed.
 
 On the release Mac, the ignored `.env.tendr` file supplies `ASC_KEY_ID`, `ASC_ISSUER_ID`, and either `ASC_KEY_PATH` or `ASC_KEY_CONTENT`. Run `bundle exec fastlane --env tendr ios beta changelog:"Visible changes"`. Existing internal group members receive the new build without another invitation.
 

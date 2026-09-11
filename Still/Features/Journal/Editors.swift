@@ -87,9 +87,8 @@ struct DoseEditor: View {
                                 Text(mode).font(.title3).foregroundStyle(.secondary)
                             }.padding(.vertical, 10)
                             if mode != "mg", let mg = milligrams { Text("\(number(mg, digits: 4)) mg · \(number((parse(amount) ?? 0) / (mode == "units" ? 100 : 1), digits: 4)) mL").font(.subheadline.weight(.medium)).foregroundStyle(.indigo) }
-                            if mode == "units" {
-                                if store.journal.syringeUnitsPerML == 100 { Text("U-100 · 100 units = 1 mL").font(.caption).foregroundStyle(.secondary) }
-                                else { Button("Set up your syringe") { preferences = true }.font(.subheadline) }
+                            if mode == "units" && store.journal.syringeUnitsPerML != 100 {
+                                Button("Set up your syringe") { preferences = true }.font(.subheadline)
                             }
                             if mode != "mg" && concentration == nil { Text("Add a vial with its concentration to log in \(mode).").font(.subheadline).foregroundStyle(.orange) }
                         }.card()
