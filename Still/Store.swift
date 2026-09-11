@@ -10,6 +10,11 @@ import UserNotifications
     private var canWrite = true
     private let file: JournalFile
     var analyticsWeights: [WeightEntry] { journal.weights.resolvedForAnalytics }
+    var firstDoseDate: Date? { journal.firstTakenDoseDate }
+    var treatmentWeights: [WeightEntry] {
+        guard let firstDoseDate else { return analyticsWeights }
+        return analyticsWeights.filter { $0.date >= firstDoseDate }
+    }
     init() {
         demo = ProcessInfo.processInfo.arguments.contains("--demo")
         let root = URL.applicationSupportDirectory.appendingPathComponent("Still", isDirectory: true)
@@ -25,15 +30,26 @@ import UserNotifications
     func commit(_ changed: Journal) -> Bool {
         guard canWrite else { error = "Your existing journal could not be opened. Saving is paused to preserve it."; return false }
         do {
-            if !demo { try file.save(changed) }
-            journal = changed
+            var normalized = changed
+            normalized.applyWeightHistoryStart()
+            if !demo { try file.save(normalized) }
+            journal = normalized
             return true
         } catch { self.error = "Could not save. \(error.localizedDescription)"; return false }
     }
     func save(weight: WeightEntry) -> Bool {
         guard EntryValidation.weight(weight.kilograms) else { error = TrackingError.invalidAmount.localizedDescription; return false }
+        if journal.weightsStartAtFirstDose, let firstDoseDate, weight.date < firstDoseDate {
+            error = "Choose a date on or after your first dose."
+            return false
+        }
         var next = journal
         next.weights.removeAll { $0.id == weight.id }; next.weights.append(weight)
+        return commit(next)
+    }
+    @discardableResult func setWeightsStartAtFirstDose(_ enabled: Bool) -> Bool {
+        var next = journal
+        next.weightsStartAtFirstDose = enabled
         return commit(next)
     }
     func connectHealthKit() async {
@@ -43,7 +59,10 @@ import UserNotifications
             next.healthKitWeightsEnabled = true
             next.weights.removeAll { $0.healthKitID != nil }
             next.weights.append(contentsOf: imported)
-            if commit(next) { healthKitStatus = imported.isEmpty ? "No weights available" : "Synced \(imported.count) weights" }
+            if commit(next) {
+                let retained = journal.weights.filter { $0.healthKitID != nil }.count
+                healthKitStatus = retained == 0 ? "No weights available" : "Synced \(retained) weights"
+            }
         } catch {
             healthKitStatus = "Could not sync"
             self.error = error.localizedDescription
@@ -56,7 +75,10 @@ import UserNotifications
             var next = journal
             next.weights.removeAll { $0.healthKitID != nil }
             next.weights.append(contentsOf: imported)
-            if commit(next) { healthKitStatus = imported.isEmpty ? "No weights available" : "Synced \(imported.count) weights" }
+            if commit(next) {
+                let retained = journal.weights.filter { $0.healthKitID != nil }.count
+                healthKitStatus = retained == 0 ? "No weights available" : "Synced \(retained) weights"
+            }
         } catch { healthKitStatus = "Could not sync" }
     }
     func save(dose: DoseEntry, inputUnit: String? = nil) -> Bool {
@@ -79,14 +101,25 @@ import UserNotifications
         do {
             guard try await center.requestAuthorization(options: [.alert, .sound, .badge]) else { reminderStatus = "Disabled in iPhone Settings"; return }
             center.removeAllPendingNotificationRequests()
-            for day in journal.schedule.weekdays.sorted() {
+            func content() -> UNMutableNotificationContent {
                 let content = UNMutableNotificationContent()
                 content.title = Self.reminderTitle
                 content.body = Self.reminderBody
                 content.sound = .default
-                let components = DateComponents(hour: journal.schedule.hour, minute: journal.schedule.minute, weekday: day)
-                let request = UNNotificationRequest(identifier: "still-weekday-\(day)", content: content, trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
-                try await center.add(request)
+                return content
+            }
+            if journal.schedule.intervalDays != nil {
+                for (index, date) in journal.schedule.occurrences(after: Date(), count: 32).enumerated() {
+                    let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                    let request = UNNotificationRequest(identifier: "still-interval-\(index)", content: content(), trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false))
+                    try await center.add(request)
+                }
+            } else {
+                for day in journal.schedule.weekdays.sorted() {
+                    let components = DateComponents(hour: journal.schedule.hour, minute: journal.schedule.minute, weekday: day)
+                    let request = UNNotificationRequest(identifier: "still-weekday-\(day)", content: content(), trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
+                    try await center.add(request)
+                }
             }
             reminderStatus = "Reminders on"
         } catch { reminderStatus = "Could not schedule reminders"; self.error = error.localizedDescription }
@@ -98,6 +131,7 @@ import UserNotifications
         journal.vials = [Vial(received: Date().addingTimeInterval(-21 * 86400), medication: "Semaglutide", concentration: 5, volumeML: 2)]
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
+        journal.goal = WeightGoal(kilograms: 82, date: cal.date(byAdding: .day, value: 60, to: today))
         journal.schedule.startDate = cal.date(byAdding: .day, value: -4, to: today)!
         let values: [Double] = [94.8,94.5,94.7,94.0,93.7,93.9,93.1,92.8,93.0,92.4,92.2,91.8,92.0,91.4,91.2,91.5,90.8,90.6,90.9,90.2,90.0,89.8,89.9,89.4,89.2,89.4,88.9,88.7,88.5]
         journal.weights = values.enumerated().map { i, value in

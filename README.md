@@ -4,7 +4,7 @@ A native, local-first iPhone journal for GLP-1 treatment. Built with SwiftUI and
 
 Available as a private TestFlight beta.
 
-Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; import body weight read-only from Apple Health; review progress and estimated medication decay; and choose weekly reminder days. Edit past records and distinguish future plans from actual entries.
+Track doses in mg, mL or explicitly confirmed U-100 syringe units; keep vial records; log weight and notes; import body weight read-only from Apple Health; review progress and estimated medication decay; and schedule weekly or every-few-days reminders. You can edit past records and optionally keep Tendr's weight history anchored to your first dose.
 
 Medication curves are simplified half-life estimates, not measured body or blood levels or dosing advice. Historical records retain their medication and concentration. Follow the instructions from your prescriber.
 

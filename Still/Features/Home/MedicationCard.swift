@@ -10,9 +10,13 @@ struct MedicationCard: View {
     @State private var now = Date()
     var model: MedicationModel { store.journal.resolvedMedicationModel }
     var halfLife: Double { store.journal.halfLifeDays }
+    var chartStart: Date { store.firstDoseDate ?? now }
+    var chartEnd: Date { now.addingTimeInterval(14 * 86400) }
     var samples: [LevelSample] {
-        (-336...336).map { offset in
-            let date = now.addingTimeInterval(Double(offset) * 3600)
+        let count = expanded ? 720 : 360
+        let span = max(1, chartEnd.timeIntervalSince(chartStart))
+        return (0...count).map { offset in
+            let date = chartStart.addingTimeInterval(span * Double(offset) / Double(count))
             return LevelSample(date: date, amount: amount(at: date), future: date > now)
         }
     }
@@ -58,6 +62,7 @@ struct MedicationCard: View {
                 PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(Theme.pine).symbolSize(55)
             }
             .chartXSelection(value: $selected)
+            .chartXScale(domain: chartStart...chartEnd)
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
             .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
             .frame(height: expanded ? 300 : 145)

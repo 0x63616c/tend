@@ -53,6 +53,37 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(dates.map { calendar.component(.day, from: $0) }, [8, 11, 15])
         XCTAssertEqual(dates.map { calendar.component(.hour, from: $0) }, [9, 9, 9])
     }
+    func testEveryFourDayScheduleKeepsLocalTimeAcrossDaylightSaving() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let anchor = calendar.date(from: DateComponents(year: 2026, month: 3, day: 6, hour: 12))!
+        let beforeAnchor = calendar.date(from: DateComponents(year: 2026, month: 3, day: 5, hour: 12))!
+        var schedule = DoseSchedule()
+        schedule.startDate = anchor
+        schedule.intervalDays = 4
+        let dates = schedule.occurrences(after: beforeAnchor, count: 4, calendar: calendar)
+        XCTAssertEqual(dates.map { calendar.component(.day, from: $0) }, [6, 10, 14, 18])
+        XCTAssertEqual(dates.map { calendar.component(.hour, from: $0) }, [9, 9, 9, 9])
+    }
+    func testStartingWeightHistoryAtFirstDoseRemovesEarlierWeights() {
+        let firstDose = Date(timeIntervalSince1970: 2_000)
+        var journal = Journal()
+        journal.weights = [
+            WeightEntry(date: Date(timeIntervalSince1970: 1_000), kilograms: 80),
+            WeightEntry(date: firstDose, kilograms: 79),
+            WeightEntry(date: Date(timeIntervalSince1970: 3_000), kilograms: 78)
+        ]
+        journal.doses = [
+            DoseEntry(date: Date(timeIntervalSince1970: 500), medication: "Semaglutide", milligrams: 0, status: .skipped),
+            DoseEntry(date: firstDose, medication: "Semaglutide", milligrams: 0.5)
+        ]
+        journal.weightsStartAtFirstDose = true
+
+        journal.applyWeightHistoryStart()
+
+        XCTAssertEqual(journal.weights.map(\.kilograms), [79, 78])
+        XCTAssertEqual(journal.firstTakenDoseDate, firstDose)
+    }
     func testJournalPersistsEditsAndPreservesMedicationHistory() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -131,6 +162,8 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(EntryValidation.number("88,5", locale: Locale(identifier: "de_DE")), 88.5)
         for input in ["12abc", "NaN", "1e4", "-90", "1,2,3", ""] { XCTAssertNil(EntryValidation.number(input, locale: us)) }
         XCTAssertFalse(EntryValidation.weight(0))
+        XCTAssertTrue(EntryValidation.weight(453.59237))
+        XCTAssertFalse(EntryValidation.weight(453.6))
         XCTAssertFalse(EntryValidation.weight(900))
         XCTAssertFalse(EntryValidation.weight(.infinity))
         XCTAssertTrue(EntryValidation.weight(88.5))

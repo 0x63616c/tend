@@ -80,13 +80,33 @@ public enum TrackingError: LocalizedError {
 
 public struct DoseSchedule: Codable, Equatable, Sendable {
     public var weekdays: Set<Int> = []
+    public var intervalDays: Int?
     public var startDate = Date()
     public var hour = 9
     public var minute = 0
     public var enabled = false
     public init() {}
     public func occurrences(after date: Date, count: Int, calendar: Calendar = .current) -> [Date] {
-        guard count > 0, !weekdays.isEmpty, weekdays.allSatisfy({ (1...7).contains($0) }), (0...23).contains(hour), (0...59).contains(minute) else { return [] }
+        guard count > 0, (0...23).contains(hour), (0...59).contains(minute) else { return [] }
+        if let intervalDays {
+            guard (1...90).contains(intervalDays),
+                  let anchor = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: startDate) else { return [] }
+            var next = anchor
+            if next <= date {
+                let elapsedDays = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: anchor), to: calendar.startOfDay(for: date)).day ?? 0)
+                let jumps = elapsedDays / intervalDays
+                next = calendar.date(byAdding: .day, value: jumps * intervalDays, to: anchor) ?? anchor
+                while next <= date { next = calendar.date(byAdding: .day, value: intervalDays, to: next) ?? date }
+            }
+            var result: [Date] = []
+            for _ in 0..<min(count, 1000) {
+                result.append(next)
+                guard let following = calendar.date(byAdding: .day, value: intervalDays, to: next) else { break }
+                next = following
+            }
+            return result
+        }
+        guard !weekdays.isEmpty, weekdays.allSatisfy({ (1...7).contains($0) }) else { return [] }
         var result: [Date] = []
         var cursor = date
         for _ in 0..<min(count, 1000) {

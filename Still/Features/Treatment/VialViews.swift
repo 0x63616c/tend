@@ -64,9 +64,11 @@ struct VialMini: View {
     var vial: Vial
     var remaining: Double { max(0, vial.volumeML - store.journal.doses.filter { $0.vialID == vial.id && $0.status == .taken && $0.date <= Date() }.reduce(0) { $0 + $1.milligrams / ($1.concentration ?? vial.concentration) }) }
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
             Text("VIAL").font(.system(size: 9, weight: .bold)).tracking(1.4).foregroundStyle(.secondary)
+            Spacer(minLength: 6)
             VialGlyph(fraction: remaining / vial.volumeML)
+            Spacer(minLength: 7)
             Text("\(number(remaining, digits: 2)) mL / \(number(vial.volumeML)) mL")
                 .font(.system(.caption2, design: .rounded, weight: .semibold))
                 .lineLimit(1)

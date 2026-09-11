@@ -24,8 +24,8 @@ struct JournalView: View {
             VStack(spacing: 8) {
                 PageHeader("Journal") {
                     Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" } } label: {
-                        Image(systemName: "plus.circle.fill").font(.title3)
-                    }.accessibilityLabel("Add entry")
+                        Image(systemName: "plus.circle.fill").font(.title2)
+                    }.frame(width: 44, height: 44).accessibilityLabel("Add entry")
                 }.padding(.horizontal, 24)
                 List {
                     Section {
@@ -122,6 +122,17 @@ struct SettingsView: View {
                         }
                         if store.journal.healthKitWeightsEnabled { LabeledContent("Status", value: store.healthKitStatus) }
                     } header: { Text("Apple Health") }
+                    Section {
+                        Toggle("Start weights at first dose", isOn: Binding(
+                            get: { store.journal.weightsStartAtFirstDose },
+                            set: { _ = store.setWeightsStartAtFirstDose($0) }
+                        )).disabled(store.firstDoseDate == nil)
+                        if let firstDoseDate = store.firstDoseDate {
+                            LabeledContent("First dose") { Text(firstDoseDate, format: .dateTime.month(.abbreviated).day().year()) }
+                        }
+                    } header: { Text("Weight history") } footer: {
+                        Text(store.firstDoseDate == nil ? "Log your first dose to use this option." : "Removes older weights from Tendr and filters them from future Apple Health syncs. Apple Health is unchanged.")
+                    }
                     Section {
                         NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
                     } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }

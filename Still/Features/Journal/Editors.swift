@@ -19,7 +19,7 @@ struct WeightEditor: View {
                         Image(systemName: "scalemass.fill").font(.title).foregroundStyle(Theme.aqua)
                         TextField("0.0", text: $amount).keyboardType(.decimalPad).font(.system(size: 62, weight: .medium, design: .rounded)).multilineTextAlignment(.center).accessibilityLabel("Weight").accessibilityIdentifier("weightAmount")
                         Text(unit.symbol).font(.subheadline).foregroundStyle(.secondary)
-                        if !amount.isEmpty && !valid { Text("Enter \(number(unit.display(20)))–\(number(unit.display(500))) \(unit.symbol).").font(.caption).foregroundStyle(.orange) }
+                        if !amount.isEmpty && !valid { Text("Enter a valid weight.").font(.caption).foregroundStyle(.orange) }
                     }.card()
                     VStack(alignment: .leading, spacing: 16) {
                         DatePicker("Date", selection: $date)
@@ -78,7 +78,6 @@ struct DoseEditor: View {
                     if let intended = entry?.scheduledDate ?? scheduledDate {
                         Label { Text(intended, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()) } icon: { Image(systemName: "calendar") }.font(.subheadline).foregroundStyle(.secondary)
                     }
-                    HStack { Text("Status").foregroundStyle(.secondary); Spacer(); Picker("Status", selection: $status) { ForEach(DoseEntry.Status.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) } }.pickerStyle(.menu).accessibilityIdentifier("doseStatus") }
                     if status != .skipped {
                         VStack(spacing: 16) {
                             Picker("Input unit", selection: Binding(get: { mode }, set: { changeMode($0) })) { Text("mg").tag("mg"); Text("mL").tag("mL"); Text("Units").tag("units") }.pickerStyle(.segmented)
@@ -93,13 +92,16 @@ struct DoseEditor: View {
                             if mode != "mg" && concentration == nil { Text("Add a vial with its concentration to log in \(mode).").font(.subheadline).foregroundStyle(.orange) }
                         }.card()
                         if entry == nil {
-                            VStack(spacing: 12) {
-                                HStack {
-                                    if let vial { VialGlyph(fraction: max(0, vial.volumeML - store.journal.doses.filter { $0.vialID == vial.id && $0.status == .taken && $0.date <= Date() }.reduce(0) { $0 + $1.milligrams / ($1.concentration ?? vial.concentration) }) / vial.volumeML) }
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 14) {
+                                    if let vial {
+                                        VialGlyph(fraction: max(0, vial.volumeML - store.journal.doses.filter { $0.vialID == vial.id && $0.status == .taken && $0.date <= Date() }.reduce(0) { $0 + $1.milligrams / ($1.concentration ?? vial.concentration) }) / vial.volumeML)
+                                            .frame(width: 42, alignment: .leading)
+                                    }
                                 Picker("Vial", selection: $vialID) {
                                     Text("No vial").tag(nil as UUID?)
                                     ForEach(store.journal.vials.sorted { $0.received > $1.received }) { item in Text("\(item.medication) · \(item.received.formatted(date: .abbreviated, time: .omitted))").tag(Optional(item.id)) }
-                                }
+                                }.frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 if let concentration { HStack { Text("Concentration"); Spacer(); Text("\(number(concentration, digits: 3)) mg/mL") }.font(.caption).foregroundStyle(.secondary) }
                                 Button { addingVial = true } label: { Label("Add a vial", systemImage: "plus") }.buttonStyle(.bordered).font(.subheadline)
@@ -107,14 +109,18 @@ struct DoseEditor: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 16) {
-                        DatePicker(status == .planned ? "Planned for" : status == .skipped ? "Skipped date" : "Taken at", selection: $date)
+                        if entry == nil {
+                            DatePicker("Taken at", selection: $date, in: ...Date())
+                        } else {
+                            DatePicker(status == .planned ? "Planned for" : status == .skipped ? "Skipped date" : "Taken at", selection: $date)
+                        }
                         DisclosureGroup("Note") { TextField("Add a note…", text: $note, axis: .vertical).lineLimit(2...5) }
                     }.card()
                     if let localError { Text(localError).font(.footnote).foregroundStyle(.red) }
 
                 }.padding(20)
             }.safeAreaInset(edge: .bottom) {
-                Button { save() } label: { Text(status == .skipped ? "Mark Skipped" : status == .planned ? "Save Plan" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose").padding(.horizontal, 20).padding(.vertical, 10).background(.bar)
+                Button { save() } label: { Text(entry == nil ? "Save Dose" : status == .skipped ? "Save" : status == .planned ? "Save" : "Save Dose").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 9) }.buttonStyle(.borderedProminent).disabled(milligrams == nil).accessibilityIdentifier("saveDose").padding(.horizontal, 20).padding(.vertical, 10).background(.bar)
             }.background(Theme.background).navigationTitle(entry == nil ? "Log Dose" : "Edit Dose").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -122,7 +128,6 @@ struct DoseEditor: View {
                 }
                 .sheet(isPresented: $addingVial) { VialEditor() }
                 .sheet(isPresented: $preferences, onDismiss: { confirmedU100 = store.journal.syringeUnitsPerML == 100 }) { DosePreferencesEditor() }
-                .onChange(of: date) { _, date in if date > Date() && status == .taken { status = .planned } }
                 .onAppear {
                     guard !initialized else { return }; initialized = true
                     confirmedU100 = store.journal.syringeUnitsPerML == 100
@@ -167,21 +172,45 @@ struct ScheduleEditor: View {
     @State private var days: Set<Int> = []
     @State private var time = Date()
     @State private var reminders = false
+    @State private var cadence = "weekdays"
+    @State private var intervalDays = 4
+    @State private var startDate = Date()
     var body: some View {
         NavigationStack {
             Form {
-                Section { ForEach(1...7, id: \.self) { day in
-                    Button { if days.contains(day) { days.remove(day) } else { days.insert(day) } } label: {
-                        HStack { Text(Calendar.current.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(.green) } }
-                    }.accessibilityAddTraits(days.contains(day) ? .isSelected : [])
-                } } header: { Text("Days of the week") } footer: { Text("Choose the days in your prescribed schedule. Your actual dose dates can be logged separately.") }
+                Section("Cadence") {
+                    Picker("Cadence", selection: $cadence) { Text("Weekdays").tag("weekdays"); Text("Every few days").tag("interval") }.pickerStyle(.segmented)
+                }
+                if cadence == "weekdays" {
+                    Section { ForEach(1...7, id: \.self) { day in
+                        Button { if days.contains(day) { days.remove(day) } else { days.insert(day) } } label: {
+                            HStack { Text(Calendar.current.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(.green) } }
+                        }.accessibilityAddTraits(days.contains(day) ? .isSelected : [])
+                    } } header: { Text("Days of the week") } footer: { Text("Choose the days in your prescribed schedule. Your actual dose dates can be logged separately.") }
+                } else {
+                    Section("Interval") {
+                        Stepper("Every \(intervalDays) days", value: $intervalDays, in: 2...30)
+                        DatePicker("Starts", selection: $startDate, displayedComponents: .date)
+                    }
+                }
                 Section("Reminders") { Toggle("Remind me", isOn: $reminders); if reminders { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute) } }
             }.navigationTitle("Your schedule").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") {
-                    var next = store.journal; next.schedule.weekdays = days; next.schedule.hour = Calendar.current.component(.hour, from: time); next.schedule.minute = Calendar.current.component(.minute, from: time); next.schedule.enabled = reminders
+                    var next = store.journal
+                    next.schedule.weekdays = days
+                    next.schedule.intervalDays = cadence == "interval" ? intervalDays : nil
+                    next.schedule.startDate = cadence == "interval" ? startDate : next.schedule.startDate
+                    next.schedule.hour = Calendar.current.component(.hour, from: time); next.schedule.minute = Calendar.current.component(.minute, from: time); next.schedule.enabled = reminders
                     if store.commit(next) { Task { await store.syncReminders() }; dismiss() }
-                }.disabled(days.isEmpty) } }
-                .onAppear { days = store.journal.schedule.weekdays; reminders = store.journal.schedule.enabled; time = Calendar.current.date(bySettingHour: store.journal.schedule.hour, minute: store.journal.schedule.minute, second: 0, of: Date())! }
+                }.disabled(cadence == "weekdays" && days.isEmpty) } }
+                .onAppear {
+                    days = store.journal.schedule.weekdays
+                    reminders = store.journal.schedule.enabled
+                    cadence = store.journal.schedule.intervalDays == nil ? "weekdays" : "interval"
+                    intervalDays = store.journal.schedule.intervalDays ?? 4
+                    startDate = store.journal.schedule.startDate
+                    time = Calendar.current.date(bySettingHour: store.journal.schedule.hour, minute: store.journal.schedule.minute, second: 0, of: Date())!
+                }
         }
     }
 }

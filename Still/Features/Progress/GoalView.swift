@@ -3,22 +3,42 @@ import SwiftUI
 struct GoalCard: View {
     @Environment(Store.self) private var store
     @State private var editing = false
-    var actual: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
+    var actual: [WeightEntry] { store.treatmentWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
     var body: some View {
         Button { editing = true } label: {
             VStack(alignment: .leading, spacing: 14) {
                 HStack { Label("Your goal", systemImage: "scope").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.pine); Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
                 if let goal = store.journal.goal {
-                    HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(goal.kilograms))).font(.system(size: 30, weight: .bold, design: .rounded)); Text(store.journal.unit.symbol).foregroundStyle(.secondary); Spacer(); if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day()).font(.subheadline).foregroundStyle(.secondary) } }
                     if let first = actual.first, let latest = actual.last {
                         let distance = first.kilograms - goal.kilograms
                         let progress = abs(distance) > 0.01 ? (first.kilograms - latest.kilograms) / distance : 1
+                        HStack(alignment: .bottom) {
+                            goalValue("STARTING", kilograms: first.kilograms, alignment: .leading)
+                            Spacer()
+                            goalValue("GOAL", kilograms: goal.kilograms, alignment: .trailing)
+                        }
                         ProgressView(value: min(1, max(0, progress))).tint(Theme.pine)
-                        Text("\(number(store.journal.unit.display(abs(latest.kilograms - goal.kilograms)))) \(store.journal.unit.symbol) from your goal").font(.caption).foregroundStyle(.secondary)
+                        HStack {
+                            Text("\(Int((min(1, max(0, progress)) * 100).rounded()))% complete")
+                            Spacer()
+                            Text("\(number(store.journal.unit.display(abs(latest.kilograms - goal.kilograms)))) \(store.journal.unit.symbol) to go")
+                        }.font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        goalValue("GOAL", kilograms: goal.kilograms, alignment: .leading)
                     }
+                    if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day().year()).font(.caption).foregroundStyle(.secondary) }
                 } else { Text("Set a weight goal").font(.headline); Text("A target, with room for real life.").font(.caption).foregroundStyle(.secondary) }
             }.card()
         }.buttonStyle(.plain).sheet(isPresented: $editing) { GoalEditor() }
+    }
+    func goalValue(_ label: String, kilograms: Double, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 4) {
+            Text(label).font(.system(size: 9, weight: .bold)).tracking(1.2).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(number(store.journal.unit.display(kilograms))).font(.system(size: 24, weight: .bold, design: .rounded))
+                Text(store.journal.unit.symbol).font(.caption).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 struct GoalEditor: View {
@@ -28,7 +48,7 @@ struct GoalEditor: View {
     @State private var hasDate = false
     @State private var date = Calendar.current.date(byAdding: .month, value: 3, to: Date())!
     var goal: WeightGoal? { guard let value = parse(amount), EntryValidation.weight(store.journal.unit.kilograms(value)) else { return nil }; return WeightGoal(kilograms: store.journal.unit.kilograms(value), date: hasDate ? date : nil) }
-    var actual: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
+    var actual: [WeightEntry] { store.treatmentWeights.filter { $0.date <= Date() }.sorted { $0.date < $1.date } }
     var body: some View {
         NavigationStack {
             Form {

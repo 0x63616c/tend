@@ -7,5 +7,5 @@ public enum EntryValidation {
               let value = Double(normalized), value.isFinite else { return nil }
         return value
     }
-    public static func weight(_ kilograms: Double) -> Bool { kilograms.isFinite && (20...500).contains(kilograms) }
+    public static func weight(_ kilograms: Double) -> Bool { kilograms.isFinite && (5...453.59237).contains(kilograms) }
 }

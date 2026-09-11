@@ -17,6 +17,7 @@ public struct Journal: Codable, Equatable, Sendable {
     public var resolvedMedicationModel: MedicationModel { medicationModel ?? MedicationModel.inferred(from: medication) }
     public var appearance = "system"
     public var healthKitWeightsEnabled = false
+    public var weightsStartAtFirstDose = false
     public var weights: [WeightEntry] = []
     public var doses: [DoseEntry] = []
     public var medication = "Semaglutide"
@@ -25,7 +26,7 @@ public struct Journal: Codable, Equatable, Sendable {
     public var unit: WeightUnit = .lb
     public var schedule = DoseSchedule()
     public init() {}
-    private enum CodingKeys: String, CodingKey { case medicationModel, doseInputUnit, version, goal, vials, syringeUnitsPerML, halfLifeDays, appearance, healthKitWeightsEnabled, weights, doses, medication, concentration, containerML, unit, schedule }
+    private enum CodingKeys: String, CodingKey { case medicationModel, doseInputUnit, version, goal, vials, syringeUnitsPerML, halfLifeDays, appearance, healthKitWeightsEnabled, weightsStartAtFirstDose, weights, doses, medication, concentration, containerML, unit, schedule }
     public init(from decoder: Decoder) throws {
         self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -39,6 +40,7 @@ public struct Journal: Codable, Equatable, Sendable {
         if let value = try values.decodeIfPresent(Double.self, forKey: .halfLifeDays) { halfLifeDays = value }
         if let value = try values.decodeIfPresent(String.self, forKey: .appearance) { appearance = value }
         healthKitWeightsEnabled = try values.decodeIfPresent(Bool.self, forKey: .healthKitWeightsEnabled) ?? false
+        weightsStartAtFirstDose = try values.decodeIfPresent(Bool.self, forKey: .weightsStartAtFirstDose) ?? false
         if let value = try values.decodeIfPresent([WeightEntry].self, forKey: .weights) { weights = value }
         if let value = try values.decodeIfPresent([DoseEntry].self, forKey: .doses) { doses = value }
         if let value = try values.decodeIfPresent(String.self, forKey: .medication) { medication = value }
@@ -46,6 +48,15 @@ public struct Journal: Codable, Equatable, Sendable {
         if let value = try values.decodeIfPresent(Double.self, forKey: .containerML) { containerML = value }
         if let value = try values.decodeIfPresent(WeightUnit.self, forKey: .unit) { unit = value }
         if let value = try values.decodeIfPresent(DoseSchedule.self, forKey: .schedule) { schedule = value }
+    }
+
+    public var firstTakenDoseDate: Date? {
+        doses.lazy.filter { $0.status == .taken }.map(\.date).min()
+    }
+
+    public mutating func applyWeightHistoryStart() {
+        guard weightsStartAtFirstDose, let firstTakenDoseDate else { return }
+        weights.removeAll { $0.date < firstTakenDoseDate }
     }
 }
 public struct JournalFile {

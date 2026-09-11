@@ -116,20 +116,9 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("3")
-        app.buttons["doseStatus"].tap()
-        XCTAssertTrue(app.buttons["Skipped"].waitForExistence(timeout: 2))
-        app.buttons["Skipped"].tap()
-        app.buttons["doseStatus"].tap()
-        XCTAssertTrue(app.buttons["Taken"].waitForExistence(timeout: 2))
-        app.buttons["Taken"].tap()
-        XCTAssertEqual(field.value as? String, "3")
-        app.buttons["doseStatus"].tap()
-        XCTAssertTrue(app.buttons["Planned"].waitForExistence(timeout: 2))
-        app.buttons["Planned"].tap()
-        app.buttons["doseStatus"].tap()
-        XCTAssertTrue(app.buttons["Taken"].waitForExistence(timeout: 2))
-        app.buttons["Taken"].tap()
-        XCTAssertEqual(field.value as? String, "3")
+        XCTAssertFalse(app.buttons["doseStatus"].exists)
+        XCTAssertFalse(app.buttons["Planned"].exists)
+        XCTAssertFalse(app.buttons["Skipped"].exists)
         app.segmentedControls.buttons["mg"].tap()
         XCTAssertEqual(field.value as? String, "0.15")
         app.segmentedControls.buttons["mL"].tap()
@@ -169,7 +158,7 @@ final class StillUITests: XCTestCase {
         app.staticTexts["200.3 lbs"].tap()
         XCTAssertEqual(app.textFields["weightAmount"].value as? String, "200.3")
     }
-    @MainActor func testDoseCanBeSavedThenChangedToSkippedAndPersisted() {
+    @MainActor func testLogDoseOnlyCreatesTakenDoses() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitest", "--reset-test-journal"]
         app.launch()
@@ -183,16 +172,23 @@ final class StillUITests: XCTestCase {
         app.buttons["Journal"].tap()
         let record = app.staticTexts["0.5 mg · Semaglutide"]
         XCTAssertTrue(record.waitForExistence(timeout: 5))
-        record.tap()
-        app.buttons["doseStatus"].tap()
-        app.buttons["Skipped"].tap()
-        XCTAssertFalse(field.exists)
-        app.buttons["saveDose"].tap()
         app.terminate()
         app.launchArguments = ["--uitest"]
         app.launch()
         app.buttons["Journal"].tap()
-        XCTAssertTrue(app.staticTexts["Skipped · Semaglutide"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["0.5 mg · Semaglutide"].waitForExistence(timeout: 5))
+    }
+    @MainActor func testEveryFewDaysScheduleCanBeSaved() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitest", "--reset-test-journal"]
+        app.launch()
+        app.buttons["Treatment"].tap()
+        app.buttons["editSchedule"].tap()
+        app.segmentedControls.buttons["Every few days"].tap()
+        XCTAssertTrue(app.staticTexts["Every 4 days"].exists)
+        XCTAssertTrue(app.staticTexts["Starts"].exists)
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Every 4 days"].waitForExistence(timeout: 5))
     }
     @MainActor func testReminderTimeIsConditionalWithoutPreview() {
         let app = XCUIApplication()

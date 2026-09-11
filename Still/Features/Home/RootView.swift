@@ -32,7 +32,8 @@ struct TodayView: View {
     @State private var scheduleSheet = false
     @State private var weightDetail = false
     @State private var vialSheet = false
-    var summary: WeightSummary { WeightSummary(entries: store.analyticsWeights, now: Date()) }
+    var homeWeights: [WeightEntry] { store.treatmentWeights.filter { $0.date <= Date() } }
+    var summary: WeightSummary { WeightSummary(entries: homeWeights, now: Date()) }
     var overdue: Date? { store.journal.schedule.outstanding(asOf: Date(), doses: store.journal.doses).first }
     var nextDate: Date? { overdue ?? store.journal.schedule.occurrences(after: Date(), count: 1).first }
     var body: some View {
@@ -66,7 +67,7 @@ struct TodayView: View {
                         HStack {
                             Label("Weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.aqua)
                             Spacer()
-                            Button { weightSheet = true } label: { Image(systemName: "plus.circle.fill").font(.title3) }.accessibilityLabel("Add Weight").accessibilityIdentifier("logWeight")
+                            Button { weightSheet = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44).accessibilityLabel("Add Weight").accessibilityIdentifier("logWeight")
                         }
                         HStack(alignment: .center, spacing: 24) {
                             VStack(alignment: .leading, spacing: 5) {
@@ -80,7 +81,7 @@ struct TodayView: View {
                                 }
                                 Text("Latest").font(.caption).foregroundStyle(.secondary)
                             }
-                            WeightChart(entries: store.analyticsWeights.filter { $0.date <= Date() }, unit: store.journal.unit, compact: true).frame(height: 65)
+                            WeightChart(entries: homeWeights, unit: store.journal.unit, compact: true).frame(height: 65)
                         }
                         Divider()
                         HStack {
@@ -154,7 +155,7 @@ struct ProgressViewScreen: View {
                 VStack(alignment: .leading, spacing: 24) {
                     if !isSheet {
                         PageHeader("Progress") {
-                            Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title3) }
+                            Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44)
                                 .accessibilityLabel("Log weight")
                         }.padding(.horizontal, 8)
                     }
@@ -162,9 +163,14 @@ struct ProgressViewScreen: View {
                     Text("Weight").font(.title.bold())
                     FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year"), (0, "All")])
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
-                        if let latest = summary.latest {
-                            HStack(alignment: .firstTextBaseline) { Text(number(store.journal.unit.display(latest))).font(.system(size: 52, weight: .medium, design: .rounded)); Text(store.journal.unit.symbol).foregroundStyle(.secondary) }
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
+                            Spacer()
+                            if let latest = summary.latest {
+                                Text("\(number(store.journal.unit.display(latest))) \(store.journal.unit.symbol)").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                            }
+                        }
+                        if summary.latest != nil {
                             WeightChart(entries: entries, unit: store.journal.unit).frame(height: 220)
                         } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your trend.")) }
                     }.card()
@@ -189,8 +195,11 @@ struct ProgressViewScreen: View {
     }
     func metric(title: String, value: String?, foot: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: icon).foregroundStyle(Theme.pine)
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Image(systemName: icon).foregroundStyle(Theme.pine)
+                Text(title).font(.caption).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
             if let value {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
