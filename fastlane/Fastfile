@@ -26,6 +26,7 @@ platform :ios do
       scheme: "Still",
       devices: [ENV.fetch("TENDR_SIMULATOR", "Tend iPhone 17 Pro Max")],
       result_bundle: true,
+      number_of_retries: 1,
       output_directory: "build/fastlane/tests"
     )
   end

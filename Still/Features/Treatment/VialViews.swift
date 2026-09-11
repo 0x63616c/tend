@@ -67,9 +67,11 @@ struct VialMini: View {
         VStack(spacing: 8) {
             Text("VIAL").font(.system(size: 9, weight: .bold)).tracking(1.4).foregroundStyle(.secondary)
             VialGlyph(fraction: remaining / vial.volumeML)
-            Text("\(number(remaining, digits: 2)) mL").font(.system(.subheadline, design: .rounded, weight: .semibold))
-            Text("of \(number(vial.volumeML)) mL").font(.caption2).foregroundStyle(.secondary)
-        }.frame(width: 82, height: 108).card()
+            Text("\(number(remaining, digits: 2)) mL / \(number(vial.volumeML)) mL")
+                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }.frame(width: 82, height: 128).card()
         .accessibilityElement(children: .combine)
     }
 }
