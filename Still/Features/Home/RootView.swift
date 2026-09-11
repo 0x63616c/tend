@@ -63,7 +63,7 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Tendr").font(.largeTitle.bold()).padding(.horizontal, 8)
+                    PageHeader("Tendr").padding(.horizontal, 8)
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 12) {
                             Label(overdue == nil ? "Next dose" : "Overdue", systemImage: overdue == nil ? "calendar" : "clock.badge.exclamationmark").font(.caption.weight(.semibold)).foregroundStyle(overdue == nil ? Theme.pine : .orange)
@@ -175,6 +175,12 @@ struct ProgressViewScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    if !isSheet {
+                        PageHeader("Progress") {
+                            Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title3) }
+                                .accessibilityLabel("Log weight")
+                        }.padding(.horizontal, 8)
+                    }
                     GoalCard()
                     Text("Weight").font(.title.bold())
                     FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year"), (0, "All")])
@@ -193,10 +199,12 @@ struct ProgressViewScreen: View {
                         HStack { Image(systemName: "circle.lefthalf.filled").foregroundStyle(Theme.pine); Text("\(number(abs(lost) / first.kilograms * 100))% \(lost >= 0 ? "decrease" : "increase") over this period").font(.subheadline) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(Theme.sage, in: RoundedRectangle(cornerRadius: 20))
                     }
                     Text("Based on recorded weights in this period. Weekly change is the average from first to latest entry, not a prediction. Future entries are excluded.").font(.caption).foregroundStyle(.secondary)
-                }.padding(22)
-            }.background(Theme.background).navigationTitle("Progress").navigationBarTitleDisplayMode(.inline)
+                }.padding(.horizontal, 16).padding(.bottom, 24)
+            }.background(Theme.background)
+                .navigationTitle(isSheet ? "Progress" : "")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(isSheet ? .visible : .hidden, for: .navigationBar)
                  .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Log weight") }
                     if isSheet { ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } } }
                 }
                 .sheet(isPresented: $adding) { WeightEditor() }

@@ -1,0 +1,84 @@
+default_platform(:ios)
+
+APP_IDENTIFIER = "com.calumwebb.still"
+APP_VERSION = "1.0.0"
+INTERNAL_GROUP = "Owner Preview"
+
+private_lane :connect_api_key do
+  key_path = ENV["ASC_KEY_PATH"]
+  key_content = ENV["ASC_KEY_CONTENT"]
+  UI.user_error!("Set ASC_KEY_PATH or ASC_KEY_CONTENT") if key_path.to_s.empty? && key_content.to_s.empty?
+
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: key_path,
+    key_content: key_content
+  )
+end
+
+platform :ios do
+  desc "Run the core and simulator UI tests"
+  lane :verify do
+    sh("swift", "test")
+    run_tests(
+      project: "Still.xcodeproj",
+      scheme: "Still",
+      devices: [ENV.fetch("TENDR_SIMULATOR", "Tend iPhone 17 Pro Max")],
+      result_bundle: true,
+      output_directory: "build/fastlane/tests"
+    )
+  end
+
+  desc "Assign an already processed build to Owner Preview"
+  lane :distribute_existing do |options|
+    build_number = options[:build]
+    UI.user_error!("Pass a build number, for example: fastlane ios distribute_existing build:12") if build_number.to_s.empty?
+
+    upload_to_testflight(
+      api_key: connect_api_key,
+      app_identifier: APP_IDENTIFIER,
+      app_version: options[:version] || APP_VERSION,
+      build_number: build_number.to_s,
+      distribute_only: true,
+      distribute_external: false,
+      groups: [INTERNAL_GROUP],
+      skip_waiting_for_build_processing: false
+    )
+  end
+
+  desc "Test, build, upload, wait, and distribute the next internal beta"
+  lane :beta do |options|
+    verify unless options[:skip_tests]
+    api_key = connect_api_key
+    version = options[:version] || APP_VERSION
+    build_number = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: APP_IDENTIFIER,
+      version: version,
+      initial_build_number: 0
+    ) + 1
+
+    build_app(
+      project: "Still.xcodeproj",
+      scheme: "Still",
+      clean: true,
+      export_method: "app-store",
+      output_directory: "build/fastlane",
+      output_name: "Tendr-#{version}-#{build_number}.ipa",
+      xcargs: "MARKETING_VERSION=#{version} CURRENT_PROJECT_VERSION=#{build_number}",
+      export_xcargs: "-allowProvisioningUpdates"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: APP_IDENTIFIER,
+      app_version: version,
+      build_number: build_number.to_s,
+      groups: [INTERNAL_GROUP],
+      distribute_external: false,
+      skip_waiting_for_build_processing: false,
+      changelog: options[:changelog] || "Small interface refinements and reliability improvements."
+    )
+  end
+end

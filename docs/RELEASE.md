@@ -1,4 +1,10 @@
-# Latest release: Tendr 1.0.0 (5)
+# Latest uploaded build: Tendr 1.0.0 (12)
+
+September 11, 2026: build 12 uploaded successfully and Apple confirmed processing completed. Assignment to the existing **Owner Preview** internal group still needs direct verification; processing alone does not prove tester availability.
+
+Future releases use the checked-in Fastlane lanes: `verify` runs the core and simulator UI tests, `beta` builds and uploads the next build then waits and assigns it to Owner Preview, and `distribute_existing` assigns a processed build without rebuilding it. App Store Connect API-key values are supplied at runtime and never committed.
+
+# Previous verified release: Tendr 1.0.0 (5)
 
 September 10, 2026: build 5 uploaded successfully and verified Testing in the existing Owner Preview internal group. App name updated to Tendr: Dose & Weight Journal. See [build 5 notes](BUILD-5.md). Existing testers can update without another invitation. Physical build 5 installation is not verified.
 

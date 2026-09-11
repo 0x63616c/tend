@@ -20,6 +20,23 @@ extension Color {
 extension View {
     func card() -> some View { padding(20).background(Theme.card, in: RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(.primary.opacity(0.035), lineWidth: 1)) }
 }
+struct PageHeader<Trailing: View>: View {
+    let title: String
+    @ViewBuilder let trailing: Trailing
+    init(_ title: String, @ViewBuilder trailing: () -> Trailing) { self.title = title; self.trailing = trailing() }
+    var body: some View {
+        HStack(alignment: .center) {
+            Text(title)
+                .font(.largeTitle.bold())
+                .accessibilityIdentifier("pageHeader-\(title)")
+            Spacer()
+            trailing
+        }.frame(minHeight: 44)
+    }
+}
+extension PageHeader where Trailing == EmptyView {
+    init(_ title: String) { self.init(title) { EmptyView() } }
+}
 func number(_ value: Double, digits: Int = 1) -> String { value.formatted(.number.precision(.fractionLength(0...digits))) }
 
 struct FilterBar<Value: Hashable>: View {

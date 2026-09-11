@@ -8,3 +8,8 @@ xcuserdata/
 *.p8
 *.p12
 *.mobileprovision
+fastlane/report.xml
+fastlane/test_output/
+fastlane/Preview.html
+.bundle/
+vendor/bundle/

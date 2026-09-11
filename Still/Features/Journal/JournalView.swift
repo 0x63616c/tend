@@ -21,28 +21,31 @@ struct JournalView: View {
     private var days: [Date] { Array(Set(entries.map { Calendar.current.startOfDay(for: $0.date) })).sorted(by: >) }
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    FilterBar(selection: $filter, options: ["All", "Doses", "Weight"].map { ($0, $0) })
-                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                ForEach(days, id: \.self) { day in
-                    Section(day.formatted(date: .abbreviated, time: .omitted)) {
-                        ForEach(entries.filter { Calendar.current.isDate($0.date, inSameDayAs: day) }) { entry in
-                            Button { edit(entry) } label: { row(entry) }.buttonStyle(.plain)
-                                .disabled(entry.isHealthKitWeight)
-                                .swipeActions(allowsFullSwipe: false) {
-                                    if !entry.isHealthKitWeight { Button("Delete", role: .destructive) { deleting = entry }.tint(.red) }
+            VStack(spacing: 8) {
+                PageHeader("Journal") {
+                    Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" } } label: {
+                        Image(systemName: "plus.circle.fill").font(.title3)
+                    }.accessibilityLabel("Add entry")
+                }.padding(.horizontal, 24)
+                List {
+                    Section {
+                        FilterBar(selection: $filter, options: ["All", "Doses", "Weight"].map { ($0, $0) })
+                    }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    ForEach(days, id: \.self) { day in
+                        Section(day.formatted(date: .abbreviated, time: .omitted)) {
+                            ForEach(entries.filter { Calendar.current.isDate($0.date, inSameDayAs: day) }) { entry in
+                                Button { edit(entry) } label: { row(entry) }.buttonStyle(.plain)
+                                    .disabled(entry.isHealthKitWeight)
+                                    .swipeActions(allowsFullSwipe: false) {
+                                        if !entry.isHealthKitWeight { Button("Delete", role: .destructive) { deleting = entry }.tint(.red) }
+                                    }
                                 }
-                        }
+                            }
                     }
+                    if entries.isEmpty { ContentUnavailableView("No entries yet", systemImage: "book.closed", description: Text("Your doses and weights appear here.")) }
                 }
-                if entries.isEmpty { ContentUnavailableView("No entries yet", systemImage: "book.closed", description: Text("Your doses and weights appear here.")) }
-            }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Journal")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu { Button("Weight") { adding = "Weight" }; Button("Dose") { adding = "Dose" } } label: { Image(systemName: "plus") }.accessibilityLabel("Add entry")
-                    }
-                }
+                .scrollContentBackground(.hidden)
+            }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } })) {
                     if adding == "Weight" { WeightEditor() } else { DoseEditor() }
                 }
@@ -99,28 +102,31 @@ struct SettingsView: View {
     @State private var editingVial: Vial?
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Preferences") {
-                    Picker("Weight unit", selection: Binding(get: { store.journal.unit }, set: { var next = store.journal; next.unit = $0; _ = store.commit(next) })) { ForEach(WeightUnit.allCases, id: \.self) { Text($0.symbol).tag($0) } }
-                    Button("Dose entry") { treatment = true }
-                    Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
-                }
-                Section {
-                    Button {
-                        Task { await store.connectHealthKit() }
-                    } label: {
-                        HStack {
-                            Label(store.journal.healthKitWeightsEnabled ? "Sync body weight" : "Connect Apple Health", systemImage: "heart.fill")
-                            Spacer()
-                            if store.journal.healthKitWeightsEnabled { Image(systemName: "arrow.clockwise").foregroundStyle(.secondary) }
-                        }
+            VStack(spacing: 8) {
+                PageHeader("Settings").padding(.horizontal, 24)
+                Form {
+                    Section("Preferences") {
+                        Picker("Weight unit", selection: Binding(get: { store.journal.unit }, set: { var next = store.journal; next.unit = $0; _ = store.commit(next) })) { ForEach(WeightUnit.allCases, id: \.self) { Text($0.symbol).tag($0) } }
+                        Button("Dose entry") { treatment = true }
+                        Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
                     }
-                    if store.journal.healthKitWeightsEnabled { LabeledContent("Status", value: store.healthKitStatus) }
-                } header: { Text("Apple Health") }
-                Section {
-                    NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
-                } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
-            }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
+                    Section {
+                        Button {
+                            Task { await store.connectHealthKit() }
+                        } label: {
+                            HStack {
+                                Label(store.journal.healthKitWeightsEnabled ? "Sync body weight" : "Connect Apple Health", systemImage: "heart.fill")
+                                Spacer()
+                                if store.journal.healthKitWeightsEnabled { Image(systemName: "arrow.clockwise").foregroundStyle(.secondary) }
+                            }
+                        }
+                        if store.journal.healthKitWeightsEnabled { LabeledContent("Status", value: store.healthKitStatus) }
+                    } header: { Text("Apple Health") }
+                    Section {
+                        NavigationLink { PrivacyView() } label: { Label("Privacy & About", systemImage: "lock.shield") }
+                    } footer: { Text("Tendr · 1.0").frame(maxWidth: .infinity).padding(.top, 12) }
+                }.scrollContentBackground(.hidden)
+            }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
                 .sheet(isPresented: $treatment) { DosePreferencesEditor() }
                 .sheet(isPresented: $addingVial) { VialEditor() }

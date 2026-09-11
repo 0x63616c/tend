@@ -11,6 +11,7 @@ struct TreatmentView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    PageHeader("Treatment").padding(.horizontal, 8)
                     Button { editing = true } label: {
                         HStack(spacing: 15) {
                             Image(systemName: "syringe.fill").font(.title2).foregroundStyle(Theme.pine).frame(width: 48, height: 48).background(Theme.sage, in: RoundedRectangle(cornerRadius: 14))
@@ -43,8 +44,8 @@ struct TreatmentView: View {
                             }
                         }.card()
                     }
-                }.padding(16)
-            }.background(Theme.background).navigationTitle("Treatment")
+                }.padding(.horizontal, 16).padding(.bottom, 24)
+            }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $editing) { TreatmentEditor() }
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
                 .sheet(isPresented: $addVial) { VialEditor() }

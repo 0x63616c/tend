@@ -1,6 +1,24 @@
 import XCTest
 
 final class StillUITests: XCTestCase {
+    @MainActor func testPrimaryPageHeadersShareOnePosition() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+
+        let home = app.staticTexts["pageHeader-Tendr"]
+        XCTAssertTrue(home.waitForExistence(timeout: 10))
+        let origin = home.frame.origin
+
+        for (tab, title) in [("Treatment", "Treatment"), ("Progress", "Progress"), ("Journal", "Journal"), ("Settings", "Settings")] {
+            app.buttons["nav\(tab)"].tap()
+            let header = app.staticTexts["pageHeader-\(title)"]
+            XCTAssertTrue(header.waitForExistence(timeout: 3))
+            XCTAssertEqual(header.frame.minX, origin.x, accuracy: 1)
+            XCTAssertEqual(header.frame.minY, origin.y, accuracy: 1)
+        }
+    }
+
     @MainActor func testPreviewScreensAndLogging() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
