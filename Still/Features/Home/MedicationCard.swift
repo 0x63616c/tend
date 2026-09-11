@@ -29,8 +29,8 @@ struct MedicationCard: View {
                 Spacer()
                 Button { info = true } label: { Image(systemName: "info.circle").foregroundStyle(.secondary) }.accessibilityLabel("About medication estimates")
             }
-            // Recalculate against real time at 30 Hz so high-precision digits do not jump in one-second batches.
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: selected != nil)) { context in
+            // Recalculate against real time at 60 Hz so high-precision digits do not jump in one-second batches.
+            TimelineView(.animation(minimumInterval: 1.0 / 60, paused: selected != nil)) { context in
                 let timestamp = selected ?? context.date
                 let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
                 VStack(alignment: .leading, spacing: 8) {
