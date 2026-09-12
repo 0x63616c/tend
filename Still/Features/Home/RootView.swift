@@ -126,8 +126,8 @@ struct WeightChart: View {
         Chart {
             ForEach(sorted) { entry in
             AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
-                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.monotone)
-            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
+                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.catmullRom)
+            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.catmullRom)
             if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(45) }
             }
             if let selected, let nearest = sorted.min(by: { abs($0.date.timeIntervalSince(selected)) < abs($1.date.timeIntervalSince(selected)) }) {
