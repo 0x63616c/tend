@@ -37,14 +37,19 @@ struct MedicationCard: View {
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: selected != nil)) { context in
                 let timestamp = selected ?? context.date
                 let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
-                let previousValue = MedicationLevel.remaining(at: timestamp.addingTimeInterval(-1), doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
+                let slope = MedicationLevel.rate(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
+                let reference = max(value, (store.journal.doses.filter { $0.medication.caseInsensitiveCompare(store.journal.medication) == .orderedSame && $0.status == .taken && $0.date <= context.date }.map(\.milligrams).max() ?? 0) * 0.1)
+                let trend = MedicationLevel.trend(rate: slope, reference: reference)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(value.formatted(.number.precision(.fractionLength(7)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
                     Text("mg").font(.headline).foregroundStyle(.secondary)
-                    if value != previousValue {
-                        Image(systemName: value > previousValue ? "arrow.up" : "arrow.down")
-                            .font(.caption.bold()).foregroundStyle(value > previousValue ? .green : .secondary)
-                            .accessibilityLabel(value > previousValue ? "Medication level rising" : "Medication level falling")
+                    if trend != 0 {
+                        HStack(spacing: 1) {
+                            ForEach(0..<abs(trend), id: \.self) { _ in
+                                Image(systemName: trend > 0 ? "arrow.up" : "arrow.down")
+                            }
+                        }.font(.caption.bold()).foregroundStyle(.secondary)
+                            .accessibilityLabel("Medication level " + (abs(trend) == 2 ? "quickly " : "") + (trend > 0 ? "rising" : "falling"))
                             .accessibilityIdentifier("medicationTrendIndicator")
                     }
                     Spacer()
@@ -61,20 +66,26 @@ struct MedicationCard: View {
                 RuleMark(x: .value("Now", now)).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(Theme.pine).symbolSize(55)
             }
-            .chartXSelection(value: $selected)
+            .chartXSelection(value: Binding(get: { expanded ? selected : nil }, set: { if expanded { selected = $0 } }))
             .chartXScale(domain: chartStart...chartEnd)
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
             .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
             .frame(height: expanded ? 300 : 145)
             .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart").contentShape(Rectangle()).simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
             .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
+            .accessibilityAction(named: "View details") { if !expanded { detail = true } }
 
         }.card()
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
-        .sheet(isPresented: $detail) {
-            NavigationStack {
-                ScrollView { MedicationCard(expanded: true).padding(16) }.background(Theme.background).navigationTitle("Medication").navigationBarTitleDisplayMode(.inline).toolbar { Button("Done") { detail = false } }
-            }
+        .navigationDestination(isPresented: $detail) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    MedicationCard(expanded: true)
+                    MedicationAnalytics()
+                }.padding(16)
+            }.background(Theme.background)
+                .navigationTitle("Medication").navigationBarTitleDisplayMode(.inline)
+                .toolbar(.visible, for: .navigationBar)
         }
         .sheet(isPresented: $info) {
             NavigationStack {
@@ -101,4 +112,60 @@ struct LevelSample: Identifiable {
     let date: Date
     let amount: Double
     let future: Bool
+}
+
+struct MedicationAnalytics: View {
+    @Environment(Store.self) private var store
+    @State private var days = 7
+    @State private var now = Date()
+    @State private var selected: Date?
+    func amount(_ date: Date) -> Double {
+        MedicationLevel.remaining(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: store.journal.halfLifeDays, now: now, model: store.journal.resolvedMedicationModel)
+    }
+    func rate(_ date: Date) -> Double {
+        MedicationLevel.rate(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: store.journal.halfLifeDays, now: now, model: store.journal.resolvedMedicationModel)
+    }
+    var body: some View {
+        let start = max(store.firstDoseDate ?? now, now.addingTimeInterval(-Double(days) * 86400))
+        let span = max(0, now.timeIntervalSince(start))
+        let dates = (span > 0 ? Array(0...240) : [0]).map { start.addingTimeInterval(span * Double($0) / 240) }
+        let values = dates.map(amount)
+        let average = span > 0 ? zip(values, values.dropFirst()).reduce(0.0) { $0 + ($1.0 + $1.1) / 2 } / 240 : amount(now)
+        let timestamp = selected ?? now
+        VStack(alignment: .leading, spacing: 16) {
+            FilterBar(selection: $days, options: [(1, "Day"), (7, "Week"), (30, "Month")])
+            VStack(alignment: .leading, spacing: 16) {
+                HStack { Text("Rate of change").font(.headline); Spacer(); Text("mg/h").font(.caption).foregroundStyle(.secondary) }
+                Chart {
+                    ForEach(dates, id: \.self) { date in
+                        LineMark(x: .value("Date", date), y: .value("mg/h", rate(date))).foregroundStyle(Theme.pine)
+                    }
+                    RuleMark(y: .value("Zero", 0)).foregroundStyle(.secondary.opacity(0.3))
+                    if let selected {
+                        RuleMark(x: .value("Selected", selected)).foregroundStyle(.secondary)
+                    }
+                }.chartXSelection(value: $selected).frame(height: 170)
+                HStack {
+                    value("Per minute", rate(timestamp) / 60, unit: "mg/min")
+                    Spacer()
+                    value("Per hour", rate(timestamp), unit: "mg/h")
+                }
+                if selected != nil { Text(timestamp, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(.secondary) }
+            }.card()
+            HStack {
+                value("Average level", average, unit: "mg")
+                Spacer()
+                value("Peak level", values.max() ?? 0, unit: "mg")
+            }.frame(maxWidth: .infinity).card()
+        }
+        .onChange(of: days) { _, _ in selected = nil }
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
+    }
+    func value(_ title: String, _ amount: Double, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(amount.formatted(.number.precision(.fractionLength(0...6)))).font(.title3.weight(.semibold)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+            Text(unit).font(.caption).foregroundStyle(.secondary)
+        }
+    }
 }

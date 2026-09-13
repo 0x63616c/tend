@@ -101,11 +101,15 @@ struct SettingsView: View {
     @State private var addingVial = false
     @State private var editingVial: Vial?
     var body: some View {
+        @Bindable var accents = Theme.preferences
         NavigationStack {
             VStack(spacing: 8) {
                 PageHeader("Settings").padding(.horizontal, 24)
                 Form {
                     Section("Preferences") {
+                        Picker("Accent", selection: $accents.selection) {
+                            ForEach(accents.options, id: \.self) { Text($0).tag($0) }
+                        }
                         Picker("Weight unit", selection: Binding(get: { store.journal.unit }, set: { var next = store.journal; next.unit = $0; _ = store.commit(next) })) { ForEach(WeightUnit.allCases, id: \.self) { Text($0.symbol).tag($0) } }
                         Button("Dose entry") { treatment = true }
                         Picker("Appearance", selection: Binding(get: { store.journal.appearance }, set: { var next = store.journal; next.appearance = $0; _ = store.commit(next) })) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }

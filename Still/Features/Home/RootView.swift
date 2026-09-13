@@ -161,7 +161,11 @@ struct ProgressViewScreen: View {
                     }
                     GoalCard()
                     Text("Weight").font(.title.bold())
-                    FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year"), (0, "All")])
+                    HStack {
+                        FilterBar(selection: $range, options: [(0, "All")])
+                        Spacer(minLength: 0)
+                        FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year")])
+                    }
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(alignment: .firstTextBaseline) {
                             Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)

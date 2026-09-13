@@ -7,7 +7,7 @@ struct GoalCard: View {
     var body: some View {
         Button { editing = true } label: {
             VStack(alignment: .leading, spacing: 14) {
-                HStack { Label("Your goal", systemImage: "scope").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.pine); Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
+                HStack { Label("Goal", systemImage: "scope").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.pine); Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
                 if let goal = store.journal.goal {
                     if let first = actual.first, let latest = actual.last {
                         let distance = first.kilograms - goal.kilograms
@@ -19,7 +19,7 @@ struct GoalCard: View {
                         }
                         ProgressView(value: min(1, max(0, progress))).tint(Theme.pine)
                         HStack {
-                            Text("\(Int((min(1, max(0, progress)) * 100).rounded()))% complete")
+                            Text("\(Int((min(1, max(0, progress)) * 100).rounded()))%")
                             Spacer()
                             Text("\(number(store.journal.unit.display(abs(latest.kilograms - goal.kilograms)))) \(store.journal.unit.symbol) to go")
                         }.font(.caption).foregroundStyle(.secondary)
@@ -27,7 +27,7 @@ struct GoalCard: View {
                         goalValue("GOAL", kilograms: goal.kilograms, alignment: .leading)
                     }
                     if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day().year()).font(.caption).foregroundStyle(.secondary) }
-                } else { Text("Set a weight goal").font(.headline); Text("A target, with room for real life.").font(.caption).foregroundStyle(.secondary) }
+                } else { Text("Set a weight goal").font(.headline) }
             }.card()
         }.buttonStyle(.plain).sheet(isPresented: $editing) { GoalEditor() }
     }

@@ -176,3 +176,35 @@ final class TrackingTests: XCTestCase {
         XCTAssertNil(WeightGoal(kilograms: 80).requiredWeeklyChange(current: 90, now: now))
     }
 }
+
+final class MedicationRateTests: XCTestCase {
+    func testHalfLifeSlopeMatchesAnalyticDerivative() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let dose = DoseEntry(date: date, medication: "Example", milligrams: 1)
+        let rate = MedicationLevel.rate(at: date, doses: [dose], medication: "Example", halfLifeDays: 7, now: date)
+        XCTAssertEqual(rate, -log(2) / 168, accuracy: 1e-8)
+    }
+    func testUpcomingDoseDoesNotCreateSpuriousSlope() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        var dose = DoseEntry(date: date.addingTimeInterval(0.5), medication: "Example", milligrams: 1)
+        dose.status = .planned
+        XCTAssertEqual(MedicationLevel.rate(at: date, doses: [dose], medication: "Example", halfLifeDays: 7, includePlans: true, now: date), 0)
+    }
+    func testAbsorptionRisesThenFalls() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        for model in [MedicationModel.semaglutide, .tirzepatide] {
+            let dose = DoseEntry(date: date, medication: "Example", milligrams: 1)
+            XCTAssertGreaterThan(MedicationLevel.rate(at: date, doses: [dose], medication: "Example", halfLifeDays: 7, now: date, model: model), 0)
+            XCTAssertLessThan(MedicationLevel.rate(at: date.addingTimeInterval(336 * 3600), doses: [dose], medication: "Example", halfLifeDays: 7, now: date, model: model), 0)
+        }
+    }
+    func testTrendThresholdIsSymmetricAndScaleIndependent() {
+        XCTAssertEqual(MedicationLevel.trend(rate: 0, reference: 1), 0)
+        XCTAssertEqual(MedicationLevel.trend(rate: 0.004, reference: 1), 1)
+        XCTAssertEqual(MedicationLevel.trend(rate: -0.004, reference: 1), -1)
+        XCTAssertEqual(MedicationLevel.trend(rate: 0.005, reference: 1), 2)
+        XCTAssertEqual(MedicationLevel.trend(rate: -0.005, reference: 1), -2)
+        XCTAssertEqual(MedicationLevel.trend(rate: -0.01, reference: 2), -2)
+        XCTAssertEqual(MedicationLevel.trend(rate: .nan, reference: 1), 0)
+    }
+}

@@ -2,6 +2,21 @@ import Foundation
 
 /// An illustrative dose-decay model, not measured blood concentration or a dosing recommendation.
 public enum MedicationLevel {
+    /// Right-hand slope in mg/hour, holding the eligible dose set fixed so
+    /// an immediate-absorption dose jump is not mistaken for continuous change.
+    public static func rate(at date: Date, doses: [DoseEntry], medication: String, halfLifeDays: Double, includePlans: Bool = false, now: Date, model: MedicationModel = .halfLife) -> Double {
+        let eligible = doses.filter { $0.date <= date }
+        let current = remaining(at: date, doses: eligible, medication: medication, halfLifeDays: halfLifeDays, includePlans: includePlans, now: now, model: model)
+        let next = remaining(at: date.addingTimeInterval(1), doses: eligible, medication: medication, halfLifeDays: halfLifeDays, includePlans: includePlans, now: now, model: model)
+        return (next - current) * 3600
+    }
+
+    /// UI threshold: 0.5% of the reference amount per hour. Not a clinical category.
+    public static func trend(rate: Double, reference: Double) -> Int {
+        guard rate.isFinite, reference.isFinite, reference > 0, abs(rate) > 1e-9 else { return 0 }
+        return (rate > 0 ? 1 : -1) * (abs(rate) / reference >= 0.005 ? 2 : 1)
+    }
+
     public static func remaining(at date: Date, doses: [DoseEntry], medication: String, halfLifeDays: Double, includePlans: Bool = false, now: Date, model: MedicationModel = .halfLife) -> Double {
         guard model != .halfLife || (halfLifeDays.isFinite && halfLifeDays > 0) else { return 0 }
         return doses.filter {

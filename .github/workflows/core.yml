@@ -8,3 +8,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift test
+      - name: Build iOS app
+        run: xcodebuild -project Still.xcodeproj -scheme Still -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
