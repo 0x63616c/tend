@@ -1,10 +1,10 @@
-# Tendr 1.0.0 (13)
+# Tendr 1.0.0 (17)
 
 ## Schedules
 
-**Custom dates.** A third cadence sits beside Weekdays and Every few days. It opens a calendar, you tap each day you plan to inject, and the chosen dates drive the next-dose card, the overdue check and reminders. This suits an uneven rhythm — three days, then five, then four — that no single interval can express. Chosen dates are listed under the calendar and can be removed individually. See [the editor](screenshots/build13-schedule-custom.png) and [the summary](screenshots/build13-treatment-custom.png).
+**Custom dates.** A third cadence sits beside Weekdays and Every few days. It opens a calendar, you tap each day you plan to inject, and the chosen dates drive the next-dose card, the overdue check and reminders. This suits an uneven rhythm — three days, then five, then four — that no single interval can express. Chosen dates are listed under the calendar and can be removed individually. See [the editor](screenshots/build17-schedule-custom.png) and [the summary](screenshots/build17-treatment-custom.png).
 
-**Clearing.** The schedule editor now has a destructive *Clear schedule* action behind a confirmation. It empties every cadence, turns reminders off and cancels pending notifications. Doses already logged are untouched. Treatment then reads *No schedule set*, and Home offers *Set your schedule* again. See [the cleared state](screenshots/build13-treatment-cleared.png).
+**Clearing.** The schedule editor now has a destructive *Clear schedule* action behind a confirmation. It empties every cadence, turns reminders off and cancels pending notifications. Doses already logged are untouched. Treatment then reads *No schedule set*, and Home offers *Set your schedule* again. See [the cleared state](screenshots/build17-treatment-cleared.png).
 
 `DoseSchedule.cadence` derives `none`, `weekdays`, `interval` or `custom` from the stored fields, so no separate mode flag can disagree with them. Saving a cadence clears the other two, so switching never leaves a stale rule behind. Reminders for chosen dates and intervals are scheduled as one-shot notifications; weekday reminders still repeat.
 
@@ -22,7 +22,7 @@ The whole medication card opens the medication screen, not only the chart. The w
 
 ## Weight chart
 
-Interpolation changed from `catmullRom` to `monotone`. Catmull-Rom overshoots between readings, inventing dips and peaks the scale never recorded. Monotone cubic interpolation cannot overshoot, so the curve stays inside the data. See [Home](screenshots/build13-home.png).
+Interpolation changed from `catmullRom` to `monotone`. Catmull-Rom overshoots between readings, inventing dips and peaks the scale never recorded. Monotone cubic interpolation cannot overshoot, so the curve stays inside the data. See [Home](screenshots/build17-home.png).
 
 ## Apple Health
 

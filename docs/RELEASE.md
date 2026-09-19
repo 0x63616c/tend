@@ -1,6 +1,8 @@
-# Latest uploaded build: Tendr 1.0.0 (13)
+# Latest uploaded build: Tendr 1.0.0 (17)
 
-September 19, 2026: build 13 adds custom dose dates, clearing a schedule, schedule-aware projections, and Apple Health sync timing. See [build 13 notes](BUILD-13.md). Upload and Owner Preview assignment are recorded below once verified.
+September 19, 2026: build 17 uploaded, processing completed, and App Store Connect confirmed distribution to the **Owner Preview** internal group. It adds custom dose dates, clearing a schedule, schedule-aware projections, one-row treatment summaries, whole-card medication navigation, the weight tile opening Progress, monotone weight interpolation, and the Apple Health last-sync time. See [build 17 notes](BUILD-17.md). Existing internal testers update without another invitation. Installation on the physical iPhone is not verified from here.
+
+Note: builds 13 to 16 were uploaded from this Mac before this entry, so the next build number comes from `latest_testflight_build_number`, not from this file.
 
 # Previous uploaded build: Tendr 1.0.0 (12)
 
