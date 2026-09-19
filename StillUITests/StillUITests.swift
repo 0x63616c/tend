@@ -203,20 +203,59 @@ final class StillUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Notification preview"].exists)
         XCTAssertFalse(app.buttons["Send test notification"].exists)
     }
-    @MainActor func testHomeGraphsOpenDetailsAndCanBeClosed() {
+    @MainActor func testHomeCardsOpenTheirOwnScreens() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
         app.launch()
-        let medicationChart = app.descendants(matching: .any).matching(identifier: "medicationChart").firstMatch
-        XCTAssertTrue(medicationChart.waitForExistence(timeout: 5))
-        medicationChart.tap()
+        // The whole medication card is the tap target, not only its chart.
+        let medicationCard = app.descendants(matching: .any).matching(identifier: "medicationCard").firstMatch
+        XCTAssertTrue(medicationCard.waitForExistence(timeout: 5))
+        medicationCard.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "medicationDetailChart").firstMatch.waitForExistence(timeout: 5))
-        app.buttons["Done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        // The weight tile moves to the Progress tab rather than opening a sheet.
         app.swipeUp()
         app.descendants(matching: .any).matching(identifier: "weightCard").firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Progress"].waitForExistence(timeout: 5))
-        app.buttons["Done"].tap()
-        XCTAssertTrue(app.buttons["logDose"].exists)
+        XCTAssertTrue(app.staticTexts["pageHeader-Progress"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Done"].exists)
+        app.buttons["Home"].tap()
+        XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 5))
+    }
+    @MainActor func testCustomDatesCanBeChosenAndTheScheduleCleared() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        app.buttons["Treatment"].tap()
+        app.buttons["editSchedule"].tap()
+        app.segmentedControls.buttons["Custom"].tap()
+        let picker = app.descendants(matching: .any).matching(identifier: "customDatePicker").firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        // Pick two days from the visible month grid.
+        let days = picker.buttons.allElementsBoundByIndex.filter { $0.isHittable }
+        XCTAssertGreaterThan(days.count, 2, "The calendar should offer selectable days")
+        days[days.count - 1].tap()
+        days[days.count - 2].tap()
+        XCTAssertTrue(app.staticTexts["Upcoming"].waitForExistence(timeout: 3))
+        capture("schedule-custom")
+        app.buttons["Save"].tap()
+        // Wait for the sheet to finish dismissing before reopening it.
+        XCTAssertTrue(app.navigationBars["Your schedule"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["editSchedule"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Custom ·'")).firstMatch.exists)
+        capture("treatment-custom")
+
+        // Clearing leaves no schedule at all.
+        app.buttons["editSchedule"].tap()
+        XCTAssertTrue(app.navigationBars["Your schedule"].waitForExistence(timeout: 5))
+        // Form rows are lazy, so scroll the calendar past before looking for the clear action.
+        let clear = app.buttons["clearSchedule"]
+        for _ in 0..<6 where !clear.exists { app.swipeUp() }
+        XCTAssertTrue(clear.waitForExistence(timeout: 5))
+        clear.tap()
+        app.alerts.buttons["Clear"].tap()
+        XCTAssertTrue(app.staticTexts["No schedule set"].waitForExistence(timeout: 5))
+        capture("treatment-cleared")
     }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

@@ -124,8 +124,19 @@ struct SettingsView: View {
                                 if store.journal.healthKitWeightsEnabled { Image(systemName: "arrow.clockwise").foregroundStyle(.secondary) }
                             }
                         }
-                        if store.journal.healthKitWeightsEnabled { LabeledContent("Status", value: store.healthKitStatus) }
-                    } header: { Text("Apple Health") }
+                        if store.journal.healthKitWeightsEnabled {
+                            LabeledContent("Status", value: store.healthKitStatus)
+                            LabeledContent("Last synced") {
+                                if let synced = store.journal.lastHealthKitSync {
+                                    Text(synced, format: .relative(presentation: .named)) + Text(" · ") + Text(synced, format: .dateTime.hour().minute())
+                                } else {
+                                    Text("Not yet")
+                                }
+                            }.accessibilityIdentifier("lastHealthSync")
+                        }
+                    } header: { Text("Apple Health") } footer: {
+                        Text(store.journal.healthKitWeightsEnabled ? "Body weight is re-read each time you open Tendr, and whenever you tap above." : "Read-only. Tendr never writes to Apple Health.")
+                    }
                     Section {
                         Toggle("Start weights at first dose", isOn: Binding(
                             get: { store.journal.weightsStartAtFirstDose },

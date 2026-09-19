@@ -1,4 +1,8 @@
-# Latest uploaded build: Tendr 1.0.0 (12)
+# Latest uploaded build: Tendr 1.0.0 (13)
+
+September 19, 2026: build 13 adds custom dose dates, clearing a schedule, schedule-aware projections, and Apple Health sync timing. See [build 13 notes](BUILD-13.md). Upload and Owner Preview assignment are recorded below once verified.
+
+# Previous uploaded build: Tendr 1.0.0 (12)
 
 September 11, 2026: build 12 uploaded successfully and Apple confirmed processing completed. Assignment to the existing **Owner Preview** internal group still needs direct verification; processing alone does not prove tester availability.
 

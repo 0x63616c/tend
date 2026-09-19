@@ -17,6 +17,7 @@ public struct Journal: Codable, Equatable, Sendable {
     public var resolvedMedicationModel: MedicationModel { medicationModel ?? MedicationModel.inferred(from: medication) }
     public var appearance = "system"
     public var healthKitWeightsEnabled = false
+    public var lastHealthKitSync: Date?
     public var weightsStartAtFirstDose = false
     public var weights: [WeightEntry] = []
     public var doses: [DoseEntry] = []
@@ -26,7 +27,7 @@ public struct Journal: Codable, Equatable, Sendable {
     public var unit: WeightUnit = .lb
     public var schedule = DoseSchedule()
     public init() {}
-    private enum CodingKeys: String, CodingKey { case medicationModel, doseInputUnit, version, goal, vials, syringeUnitsPerML, halfLifeDays, appearance, healthKitWeightsEnabled, weightsStartAtFirstDose, weights, doses, medication, concentration, containerML, unit, schedule }
+    private enum CodingKeys: String, CodingKey { case medicationModel, doseInputUnit, version, goal, vials, syringeUnitsPerML, halfLifeDays, appearance, healthKitWeightsEnabled, lastHealthKitSync, weightsStartAtFirstDose, weights, doses, medication, concentration, containerML, unit, schedule }
     public init(from decoder: Decoder) throws {
         self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -40,6 +41,7 @@ public struct Journal: Codable, Equatable, Sendable {
         if let value = try values.decodeIfPresent(Double.self, forKey: .halfLifeDays) { halfLifeDays = value }
         if let value = try values.decodeIfPresent(String.self, forKey: .appearance) { appearance = value }
         healthKitWeightsEnabled = try values.decodeIfPresent(Bool.self, forKey: .healthKitWeightsEnabled) ?? false
+        lastHealthKitSync = try values.decodeIfPresent(Date.self, forKey: .lastHealthKitSync)
         weightsStartAtFirstDose = try values.decodeIfPresent(Bool.self, forKey: .weightsStartAtFirstDose) ?? false
         if let value = try values.decodeIfPresent([WeightEntry].self, forKey: .weights) { weights = value }
         if let value = try values.decodeIfPresent([DoseEntry].self, forKey: .doses) { doses = value }
@@ -70,5 +72,31 @@ public struct JournalFile {
     public func load() throws -> Journal {
         guard FileManager.default.fileExists(atPath: url.path) else { return Journal() }
         return try JSONDecoder().decode(Journal.self, from: Data(contentsOf: url))
+    }
+}
+
+public extension Journal {
+    /// The recent typical dose, used only to draw what the schedule implies. Never recorded.
+    var typicalDoseMilligrams: Double? {
+        let recent = doses
+            .filter { $0.status == .taken && $0.milligrams.isFinite && $0.milligrams > 0 && $0.medication.caseInsensitiveCompare(medication) == .orderedSame }
+            .sorted { $0.date > $1.date }
+            .prefix(3)
+            .map(\.milligrams)
+        guard !recent.isEmpty else { return nil }
+        return recent.reduce(0, +) / Double(recent.count)
+    }
+
+    /// Placeholder doses for upcoming scheduled dates, so the projection shows what is coming.
+    /// These are estimates at your usual amount, not entries, and a date you have already
+    /// logged or explicitly planned keeps its own record instead.
+    func scheduledProjection(from now: Date, through end: Date, calendar: Calendar = .current) -> [DoseEntry] {
+        guard schedule.cadence != .none, end > now, let milligrams = typicalDoseMilligrams else { return [] }
+        return schedule.occurrences(after: now, count: 64, calendar: calendar)
+            .prefix { $0 <= end }
+            .filter { occurrence in
+                !doses.contains { calendar.isDate($0.date, inSameDayAs: occurrence) }
+            }
+            .map { DoseEntry(date: $0, scheduledDate: $0, medication: medication, milligrams: milligrams, concentration: concentration, status: .planned) }
     }
 }

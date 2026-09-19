@@ -78,16 +78,63 @@ public enum TrackingError: LocalizedError {
     }
 }
 
+public enum ScheduleCadence: String, Sendable {
+    case none, weekdays, interval, custom
+}
+
 public struct DoseSchedule: Codable, Equatable, Sendable {
     public var weekdays: Set<Int> = []
     public var intervalDays: Int?
+    /// Explicitly chosen dose days, stored at the start of each day and read back at the reminder time.
+    public var customDates: [Date] = []
     public var startDate = Date()
     public var hour = 9
     public var minute = 0
     public var enabled = false
     public init() {}
+
+    private enum CodingKeys: String, CodingKey { case weekdays, intervalDays, customDates, startDate, hour, minute, enabled }
+    /// Decoded field by field so journals written before a field existed still open.
+    public init(from decoder: Decoder) throws {
+        self.init()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        weekdays = try values.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? []
+        intervalDays = try values.decodeIfPresent(Int.self, forKey: .intervalDays)
+        customDates = try values.decodeIfPresent([Date].self, forKey: .customDates) ?? []
+        if let value = try values.decodeIfPresent(Date.self, forKey: .startDate) { startDate = value }
+        if let value = try values.decodeIfPresent(Int.self, forKey: .hour) { hour = value }
+        if let value = try values.decodeIfPresent(Int.self, forKey: .minute) { minute = value }
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+    }
+
+    public var cadence: ScheduleCadence {
+        if !customDates.isEmpty { return .custom }
+        if intervalDays != nil { return .interval }
+        if !weekdays.isEmpty { return .weekdays }
+        return .none
+    }
+
+    /// Removes the schedule entirely, leaving no upcoming doses and no reminders.
+    public mutating func clear() {
+        weekdays = []
+        intervalDays = nil
+        customDates = []
+        enabled = false
+    }
+
+    /// Custom days resolved to the reminder time, de-duplicated and in order.
+    public func resolvedCustomDates(calendar: Calendar = .current) -> [Date] {
+        let resolved = customDates.compactMap {
+            calendar.date(bySettingHour: hour, minute: minute, second: 0, of: $0)
+        }
+        return Array(Set(resolved)).sorted()
+    }
+
     public func occurrences(after date: Date, count: Int, calendar: Calendar = .current) -> [Date] {
         guard count > 0, (0...23).contains(hour), (0...59).contains(minute) else { return [] }
+        if !customDates.isEmpty {
+            return Array(resolvedCustomDates(calendar: calendar).filter { $0 > date }.prefix(count))
+        }
         if let intervalDays {
             guard (1...90).contains(intervalDays),
                   let anchor = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: startDate) else { return [] }
@@ -122,9 +169,11 @@ public struct DoseSchedule: Codable, Equatable, Sendable {
 
 public extension DoseSchedule {
     func outstanding(asOf now: Date, doses: [DoseEntry], calendar: Calendar = .current) -> [Date] {
-        guard startDate <= now else { return [] }
+        guard cadence != .none else { return [] }
+        // Chosen dates stand on their own; the interval and weekday cadences run from their start date.
+        if cadence != .custom && startDate > now { return [] }
         var pending: [Date] = []
-        var cursor = startDate.addingTimeInterval(-1)
+        var cursor = cadence == .custom ? Date.distantPast : startDate.addingTimeInterval(-1)
         while let next = occurrences(after: cursor, count: 1, calendar: calendar).first, next <= now {
             let resolved = doses.contains { dose in
                 dose.status != .planned && (dose.scheduledDate == next || (dose.scheduledDate == nil && calendar.isDate(dose.date, inSameDayAs: next)))

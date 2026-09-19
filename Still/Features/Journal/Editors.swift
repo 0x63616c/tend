@@ -172,46 +172,123 @@ struct ScheduleEditor: View {
     @State private var days: Set<Int> = []
     @State private var time = Date()
     @State private var reminders = false
-    @State private var cadence = "weekdays"
+    @State private var cadence = ScheduleCadence.weekdays
     @State private var intervalDays = 4
     @State private var startDate = Date()
+    @State private var customDays: Set<DateComponents> = []
+    @State private var clearing = false
+
+    private var calendar: Calendar { Calendar.current }
+    private var customDates: [Date] {
+        customDays.compactMap { calendar.date(from: $0).map { calendar.startOfDay(for: $0) } }.sorted()
+    }
+    private var upcomingCustomDates: [Date] {
+        customDates.filter { $0 >= calendar.startOfDay(for: Date()) }
+    }
+    private var canSave: Bool {
+        switch cadence {
+        case .weekdays: !days.isEmpty
+        case .custom: !customDates.isEmpty
+        case .interval, .none: true
+        }
+    }
+    private var hasExistingSchedule: Bool { store.journal.schedule.cadence != .none }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Cadence") {
-                    Picker("Cadence", selection: $cadence) { Text("Weekdays").tag("weekdays"); Text("Every few days").tag("interval") }.pickerStyle(.segmented)
+                    Picker("Cadence", selection: $cadence) {
+                        Text("Weekdays").tag(ScheduleCadence.weekdays)
+                        Text("Every few days").tag(ScheduleCadence.interval)
+                        Text("Custom").tag(ScheduleCadence.custom)
+                    }.pickerStyle(.segmented).accessibilityIdentifier("cadencePicker")
                 }
-                if cadence == "weekdays" {
+                switch cadence {
+                case .weekdays:
                     Section { ForEach(1...7, id: \.self) { day in
                         Button { if days.contains(day) { days.remove(day) } else { days.insert(day) } } label: {
-                            HStack { Text(Calendar.current.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(.green) } }
+                            HStack { Text(calendar.weekdaySymbols[day - 1]).foregroundStyle(.primary); Spacer(); if days.contains(day) { Image(systemName: "checkmark").foregroundStyle(.green) } }
                         }.accessibilityAddTraits(days.contains(day) ? .isSelected : [])
                     } } header: { Text("Days of the week") } footer: { Text("Choose the days in your prescribed schedule. Your actual dose dates can be logged separately.") }
-                } else {
+                case .interval:
                     Section("Interval") {
                         Stepper("Every \(intervalDays) days", value: $intervalDays, in: 2...30)
                         DatePicker("Starts", selection: $startDate, displayedComponents: .date)
                     }
+                case .custom:
+                    Section {
+                        MultiDatePicker("Dose dates", selection: $customDays, in: calendar.startOfDay(for: Date())...)
+                            .frame(minHeight: 320)
+                            .accessibilityIdentifier("customDatePicker")
+                    } header: { Text("Pick your dates") } footer: {
+                        Text("Tap each day you plan to take your dose. Useful when your gap varies, for example three days then five. Add more whenever you like.")
+                    }
+                    if !upcomingCustomDates.isEmpty {
+                        Section("Upcoming") {
+                            ForEach(upcomingCustomDates.prefix(12), id: \.self) { date in
+                                HStack {
+                                    Text(date, format: .dateTime.weekday(.wide).month(.abbreviated).day())
+                                    Spacer()
+                                    Button { customDays.remove(calendar.dateComponents([.era, .year, .month, .day], from: date)) } label: {
+                                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                                    }.buttonStyle(.plain).accessibilityLabel("Remove \(date.formatted(date: .abbreviated, time: .omitted))")
+                                }
+                            }
+                            LabeledContent("Chosen", value: "\(upcomingCustomDates.count)")
+                        }
+                    }
+                case .none:
+                    EmptyView()
                 }
-                Section("Reminders") { Toggle("Remind me", isOn: $reminders); if reminders { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute) } }
+                Section("Reminders") {
+                    Toggle("Remind me", isOn: $reminders)
+                    if reminders { DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute) }
+                }
+                if hasExistingSchedule {
+                    Section {
+                        Button("Clear schedule", role: .destructive) { clearing = true }
+                            .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("clearSchedule")
+                    } footer: {
+                        Text("Removes all upcoming dose dates and reminders. Doses you have already logged are kept.")
+                    }
+                }
             }.navigationTitle("Your schedule").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") {
-                    var next = store.journal
-                    next.schedule.weekdays = days
-                    next.schedule.intervalDays = cadence == "interval" ? intervalDays : nil
-                    next.schedule.startDate = cadence == "interval" ? startDate : next.schedule.startDate
-                    next.schedule.hour = Calendar.current.component(.hour, from: time); next.schedule.minute = Calendar.current.component(.minute, from: time); next.schedule.enabled = reminders
-                    if store.commit(next) { Task { await store.syncReminders() }; dismiss() }
-                }.disabled(cadence == "weekdays" && days.isEmpty) } }
-                .onAppear {
-                    days = store.journal.schedule.weekdays
-                    reminders = store.journal.schedule.enabled
-                    cadence = store.journal.schedule.intervalDays == nil ? "weekdays" : "interval"
-                    intervalDays = store.journal.schedule.intervalDays ?? 4
-                    startDate = store.journal.schedule.startDate
-                    time = Calendar.current.date(bySettingHour: store.journal.schedule.hour, minute: store.journal.schedule.minute, second: 0, of: Date())!
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(!canSave) }
                 }
+                .alert("Clear your schedule?", isPresented: $clearing) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Clear", role: .destructive) { if store.clearSchedule() { dismiss() } }
+                } message: { Text("You will have no upcoming doses or reminders until you set one again.") }
+                .onAppear(perform: load)
         }
+    }
+
+    private func load() {
+        let schedule = store.journal.schedule
+        days = schedule.weekdays
+        reminders = schedule.enabled
+        cadence = schedule.cadence == .none ? .weekdays : schedule.cadence
+        intervalDays = schedule.intervalDays ?? 4
+        startDate = schedule.startDate
+        customDays = Set(schedule.customDates.map { calendar.dateComponents([.era, .year, .month, .day], from: $0) })
+        time = calendar.date(bySettingHour: schedule.hour, minute: schedule.minute, second: 0, of: Date()) ?? Date()
+    }
+
+    private func save() {
+        var next = store.journal
+        // Only the chosen cadence keeps its dates, so switching never leaves a stale rule behind.
+        next.schedule.weekdays = cadence == .weekdays ? days : []
+        next.schedule.intervalDays = cadence == .interval ? intervalDays : nil
+        next.schedule.customDates = cadence == .custom ? customDates : []
+        if cadence == .interval { next.schedule.startDate = startDate }
+        next.schedule.hour = calendar.component(.hour, from: time)
+        next.schedule.minute = calendar.component(.minute, from: time)
+        next.schedule.enabled = reminders
+        if store.commit(next) { Task { await store.syncReminders() }; dismiss() }
     }
 }
 

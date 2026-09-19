@@ -111,6 +111,78 @@ final class TrackingTests: XCTestCase {
         XCTAssertEqual(schedule.outstanding(asOf: tuesday, doses: [late], calendar: cal), [])
         XCTAssertEqual(cal.component(.weekday, from: schedule.occurrences(after: tuesday, count: 1, calendar: cal)[0]), 5)
     }
+    func testCustomDatesDriveTheScheduleAndSurviveAnUnevenGap() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = { (d: Int) in cal.date(from: DateComponents(year: 2026, month: 9, day: d))! }
+        var schedule = DoseSchedule()
+        schedule.hour = 8; schedule.minute = 30
+        schedule.customDates = [day(14), day(7), day(10), day(7)]
+
+        XCTAssertEqual(schedule.cadence, .custom)
+        let upcoming = schedule.occurrences(after: day(8), count: 5, calendar: cal)
+        XCTAssertEqual(upcoming, [day(10), day(14)].map { cal.date(bySettingHour: 8, minute: 30, second: 0, of: $0)! })
+        // A three-day gap then a four-day gap: no single interval could produce this.
+        XCTAssertEqual(cal.dateComponents([.day], from: day(7), to: day(10)).day, 3)
+        XCTAssertEqual(schedule.outstanding(asOf: day(8), doses: [], calendar: cal),
+                       [cal.date(bySettingHour: 8, minute: 30, second: 0, of: day(7))!])
+    }
+    func testClearingASchedulePlansNothingAndDisablesReminders() {
+        var schedule = DoseSchedule()
+        schedule.weekdays = [2, 5]; schedule.intervalDays = 4; schedule.customDates = [Date()]; schedule.enabled = true
+
+        schedule.clear()
+
+        XCTAssertEqual(schedule.cadence, .none)
+        XCTAssertFalse(schedule.enabled)
+        XCTAssertTrue(schedule.occurrences(after: Date(), count: 5).isEmpty)
+        XCTAssertTrue(schedule.outstanding(asOf: Date(), doses: []).isEmpty)
+    }
+    func testScheduleProjectionUsesRecentDosesAndNeverDoublesUpOrInventsWithoutHistory() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = cal.date(from: DateComponents(year: 2026, month: 9, day: 9, hour: 12))!
+        var journal = Journal()
+        journal.schedule.customDates = [11, 15, 40].map { cal.date(from: DateComponents(year: 2026, month: 9, day: $0))! }
+
+        // Without a recorded dose there is no usual amount, so nothing is drawn.
+        XCTAssertTrue(journal.scheduledProjection(from: now, through: now.addingTimeInterval(14 * 86400), calendar: cal).isEmpty)
+
+        journal.doses = [
+            DoseEntry(date: now.addingTimeInterval(-7 * 86400), medication: "Semaglutide", milligrams: 0.4),
+            DoseEntry(date: now.addingTimeInterval(-3 * 86400), medication: "Semaglutide", milligrams: 0.6)
+        ]
+        let projection = journal.scheduledProjection(from: now, through: now.addingTimeInterval(14 * 86400), calendar: cal)
+        XCTAssertEqual(projection.count, 2, "Only the two dates inside the window")
+        XCTAssertEqual(projection.map(\.milligrams), [0.5, 0.5])
+        XCTAssertTrue(projection.allSatisfy { $0.status == .planned })
+
+        // A dose already logged on a scheduled day keeps its own record.
+        journal.doses.append(DoseEntry(date: cal.date(from: DateComponents(year: 2026, month: 9, day: 11, hour: 8))!, medication: "Semaglutide", milligrams: 0.5, status: .planned))
+        XCTAssertEqual(journal.scheduledProjection(from: now, through: now.addingTimeInterval(14 * 86400), calendar: cal).count, 1)
+    }
+    func testProjectedSchedulesNeverCountTowardsTheCurrentLevel() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var journal = Journal()
+        journal.doses = [DoseEntry(date: now.addingTimeInterval(-86400), medication: "Semaglutide", milligrams: 1)]
+        journal.schedule.customDates = [now.addingTimeInterval(2 * 86400)]
+        let projection = journal.scheduledProjection(from: now, through: now.addingTimeInterval(14 * 86400))
+        XCTAssertEqual(projection.count, 1)
+
+        let recorded = MedicationLevel.remaining(at: now, doses: journal.doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: now, model: .halfLife)
+        let withProjection = MedicationLevel.remaining(at: now, doses: journal.doses + projection, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: now, model: .halfLife)
+        XCTAssertEqual(recorded, withProjection, accuracy: 1e-12)
+        XCTAssertGreaterThan(
+            MedicationLevel.remaining(at: now.addingTimeInterval(3 * 86400), doses: journal.doses + projection, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: now, model: .halfLife),
+            MedicationLevel.remaining(at: now.addingTimeInterval(3 * 86400), doses: journal.doses, medication: "Semaglutide", halfLifeDays: 7, includePlans: true, now: now, model: .halfLife)
+        )
+    }
+    func testJournalWrittenBeforeCustomDatesAndSyncStampStillOpens() throws {
+        let old = Data(#"{"version":1,"weights":[],"doses":[],"medication":"Semaglutide","schedule":{"weekdays":[2],"startDate":0,"hour":9,"minute":0,"enabled":true}}"#.utf8)
+        let journal = try JSONDecoder().decode(Journal.self, from: old)
+        XCTAssertEqual(journal.schedule.weekdays, [2])
+        XCTAssertEqual(journal.schedule.cadence, .weekdays)
+        XCTAssertTrue(journal.schedule.customDates.isEmpty)
+        XCTAssertNil(journal.lastHealthKitSync)
+    }
     func testSyringeUnitsRequireScaleAndConvertUsingVialConcentration() throws {
         let vial = Vial(received: Date(), medication: "Semaglutide", concentration: 5, volumeML: 2)
         XCTAssertEqual(vial.totalMilligrams, 10)

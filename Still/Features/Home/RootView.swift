@@ -8,7 +8,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var store = store
         TabView(selection: $selected) {
-            TodayView().tag(0).tabItem { Label("Home", systemImage: "square.grid.2x2.fill").accessibilityIdentifier("navHome") }
+            TodayView(tab: $selected).tag(0).tabItem { Label("Home", systemImage: "square.grid.2x2.fill").accessibilityIdentifier("navHome") }
             TreatmentView().tag(1).tabItem { Label("Treatment", systemImage: "syringe.fill").accessibilityIdentifier("navTreatment") }
             ProgressViewScreen().tag(2).tabItem { Label("Progress", systemImage: "chart.xyaxis.line").accessibilityIdentifier("navProgress") }
             JournalView().tag(3).tabItem { Label("Journal", systemImage: "book.closed").accessibilityIdentifier("navJournal") }
@@ -26,11 +26,11 @@ struct RootView: View {
 }
 
 struct TodayView: View {
+    @Binding var tab: Int
     @Environment(Store.self) private var store
     @State private var weightSheet = false
     @State private var doseSheet = false
     @State private var scheduleSheet = false
-    @State private var weightDetail = false
     @State private var vialSheet = false
     var homeWeights: [WeightEntry] { store.treatmentWeights.filter { $0.date <= Date() } }
     var summary: WeightSummary { WeightSummary(entries: homeWeights, now: Date()) }
@@ -89,14 +89,16 @@ struct TodayView: View {
                             Spacer(); Divider().frame(height: 32); Spacer()
                             stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) }, suffix: store.journal.unit.symbol, alignment: .trailing)
                         }
-                    }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle()).onTapGesture { weightDetail = true }
+                    }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle())
+                        .onTapGesture { tab = 2 }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHint("Opens Progress")
 
                 }.padding(.horizontal, 16).padding(.bottom, 24)
             }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $weightSheet) { WeightEditor() }
                 .sheet(isPresented: $doseSheet) { DoseEditor(scheduledDate: nextDate) }
                 .sheet(isPresented: $scheduleSheet) { ScheduleEditor() }
-                .sheet(isPresented: $weightDetail) { ProgressViewScreen(isSheet: true) }
                 .sheet(isPresented: $vialSheet) { VialEditor(vial: store.journal.vials.sorted { $0.received > $1.received }.first) }
         }
     }
@@ -126,8 +128,8 @@ struct WeightChart: View {
         Chart {
             ForEach(sorted) { entry in
             AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
-                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.catmullRom)
-            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.catmullRom)
+                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.monotone)
+            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.monotone)
             if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(45) }
             }
             if let selected, let nearest = sorted.min(by: { abs($0.date.timeIntervalSince(selected)) < abs($1.date.timeIntervalSince(selected)) }) {
@@ -142,8 +144,6 @@ struct WeightChart: View {
 }
 
 struct ProgressViewScreen: View {
-    var isSheet = false
-    @Environment(\.dismiss) private var dismiss
     @Environment(Store.self) private var store
     @State private var range = 90
     @State private var adding = false
@@ -153,12 +153,10 @@ struct ProgressViewScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    if !isSheet {
-                        PageHeader("Progress") {
-                            Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44)
-                                .accessibilityLabel("Log weight")
-                        }.padding(.horizontal, 8)
-                    }
+                    PageHeader("Progress") {
+                        Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44)
+                            .accessibilityLabel("Log weight")
+                    }.padding(.horizontal, 8)
                     GoalCard()
                     Text("Weight").font(.title.bold())
                     HStack {
@@ -188,12 +186,7 @@ struct ProgressViewScreen: View {
                     Text("Based on recorded weights in this period. Weekly change is the average from first to latest entry, not a prediction. Future entries are excluded.").font(.caption).foregroundStyle(.secondary)
                 }.padding(.horizontal, 16).padding(.bottom, 24)
             }.background(Theme.background)
-                .navigationTitle(isSheet ? "Progress" : "")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar(isSheet ? .visible : .hidden, for: .navigationBar)
-                 .toolbar {
-                    if isSheet { ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } } }
-                }
+                .toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $adding) { WeightEditor() }
         }
     }

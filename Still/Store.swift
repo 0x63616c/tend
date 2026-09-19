@@ -57,6 +57,7 @@ import UserNotifications
             let imported = try await HealthKitWeightStore.requestAndFetch()
             var next = journal
             next.healthKitWeightsEnabled = true
+            next.lastHealthKitSync = Date()
             next.weights.removeAll { $0.healthKitID != nil }
             next.weights.append(contentsOf: imported)
             if commit(next) {
@@ -73,6 +74,7 @@ import UserNotifications
         do {
             let imported = try await HealthKitWeightStore.fetch()
             var next = journal
+            next.lastHealthKitSync = Date()
             next.weights.removeAll { $0.healthKitID != nil }
             next.weights.append(contentsOf: imported)
             if commit(next) {
@@ -88,6 +90,15 @@ import UserNotifications
         next.doses.removeAll { $0.id == dose.id }; next.doses.append(dose)
         return commit(next)
     }
+    /// Removes the schedule and any reminders it had queued.
+    @discardableResult func clearSchedule() -> Bool {
+        var next = journal
+        next.schedule.clear()
+        guard commit(next) else { return false }
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        reminderStatus = "No schedule set"
+        return true
+    }
     @discardableResult func delete(weight: WeightEntry) -> Bool { var next = journal; next.weights.removeAll { $0.id == weight.id }; return commit(next) }
     @discardableResult func delete(dose: DoseEntry) -> Bool { var next = journal; next.doses.removeAll { $0.id == dose.id }; return commit(next) }
     static let reminderTitle = "A quick reminder"
@@ -95,8 +106,10 @@ import UserNotifications
     func syncReminders() async {
         guard !demo else { reminderStatus = "Demo • no notifications"; return }
         let center = UNUserNotificationCenter.current()
-        guard journal.schedule.enabled else {
-            center.removeAllPendingNotificationRequests(); reminderStatus = "Off"; return
+        guard journal.schedule.enabled, journal.schedule.cadence != .none else {
+            center.removeAllPendingNotificationRequests()
+            reminderStatus = journal.schedule.cadence == .none ? "No schedule set" : "Off"
+            return
         }
         do {
             guard try await center.requestAuthorization(options: [.alert, .sound, .badge]) else { reminderStatus = "Disabled in iPhone Settings"; return }
@@ -108,16 +121,21 @@ import UserNotifications
                 content.sound = .default
                 return content
             }
-            if journal.schedule.intervalDays != nil {
-                for (index, date) in journal.schedule.occurrences(after: Date(), count: 32).enumerated() {
-                    let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                    let request = UNNotificationRequest(identifier: "still-interval-\(index)", content: content(), trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false))
-                    try await center.add(request)
-                }
-            } else {
+            switch journal.schedule.cadence {
+            case .none:
+                reminderStatus = "No schedule set"
+                return
+            case .weekdays:
                 for day in journal.schedule.weekdays.sorted() {
                     let components = DateComponents(hour: journal.schedule.hour, minute: journal.schedule.minute, weekday: day)
                     let request = UNNotificationRequest(identifier: "still-weekday-\(day)", content: content(), trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
+                    try await center.add(request)
+                }
+            case .interval, .custom:
+                // One-shot reminders: chosen dates do not repeat, and an interval drifts off the calendar week.
+                for (index, date) in journal.schedule.occurrences(after: Date(), count: 32).enumerated() {
+                    let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                    let request = UNNotificationRequest(identifier: "still-dated-\(index)", content: content(), trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false))
                     try await center.add(request)
                 }
             }

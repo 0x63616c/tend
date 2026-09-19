@@ -12,6 +12,9 @@ struct MedicationCard: View {
     var halfLife: Double { store.journal.halfLifeDays }
     var chartStart: Date { store.firstDoseDate ?? now }
     var chartEnd: Date { now.addingTimeInterval(14 * 86400) }
+    /// Recorded doses plus the doses the schedule implies, so the projection shows what is coming.
+    var projected: [DoseEntry] { store.journal.scheduledProjection(from: now, through: chartEnd) }
+    var chartDoses: [DoseEntry] { store.journal.doses + projected }
     var samples: [LevelSample] {
         let count = expanded ? 720 : 360
         let span = max(1, chartEnd.timeIntervalSince(chartStart))
@@ -21,7 +24,7 @@ struct MedicationCard: View {
         }
     }
     func amount(at date: Date) -> Double {
-        MedicationLevel.remaining(at: date, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: now, model: model)
+        MedicationLevel.remaining(at: date, doses: chartDoses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: now, model: model)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -63,6 +66,10 @@ struct MedicationCard: View {
                 ForEach(samples.filter { $0.date >= now }) { point in
                     LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "Projection")).foregroundStyle(Theme.pine.opacity(0.65)).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
                 }
+                ForEach(chartDoses.filter { $0.status == .planned && $0.date > now && $0.date <= chartEnd }) { dose in
+                    PointMark(x: .value("Date", dose.date), y: .value("Estimated mg", amount(at: dose.date)))
+                        .foregroundStyle(Theme.pine.opacity(0.55)).symbolSize(28).symbol(.circle)
+                }
                 RuleMark(x: .value("Now", now)).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(Theme.pine).symbolSize(55)
             }
@@ -71,11 +78,20 @@ struct MedicationCard: View {
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
             .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
             .frame(height: expanded ? 300 : 145)
-            .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart").contentShape(Rectangle()).simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
+            .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart")
             .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
-            .accessibilityAction(named: "View details") { if !expanded { detail = true } }
-
+            if !expanded, !projected.isEmpty {
+                Text("Dashed line includes \(projected.count) scheduled dose\(projected.count == 1 ? "" : "s") at your usual amount.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
         }.card()
+        // The whole card is the tap target; the info button and chart selection still take their own taps first.
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(expanded ? [] : .isButton)
+        .accessibilityAction(named: "View details") { if !expanded { detail = true } }
+        .accessibilityIdentifier(expanded ? "medicationDetailCard" : "medicationCard")
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
         .navigationDestination(isPresented: $detail) {
             ScrollView {
@@ -94,7 +110,7 @@ struct MedicationCard: View {
                         Text("This graph estimates absorbed medication remaining from your recorded doses. It is not a measured blood level or the exact amount in your body.")
                         Text("Injection models include gradual absorption, distribution and clearance using published reference parameters. They are not personalised to your body or vial formulation. Extra decimal places do not add medical accuracy. Do not use the graph to choose or change a dose.")
                     }
-                    Section("Projection") { Text("The dashed line always includes future doses you explicitly entered. Planned doses never count as already taken. Your weekly schedule does not invent dose amounts.") }
+                    Section("Projection") { Text("The dashed line includes future doses you explicitly entered and, when you have a schedule, the dates it implies. Scheduled doses are drawn at the average of your last three recorded doses, are never counted as already taken, and are not added to your journal. Log each dose as you take it.") }
                     Section("Model") {
                         Text(model.title)
                         if model == .halfLife { Text("Immediate absorption with a \(number(halfLife))-day half-life. Choose an injection model in Treatment details to include absorption.") }

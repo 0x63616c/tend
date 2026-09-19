@@ -6,6 +6,21 @@ struct TreatmentView: View {
     @State private var schedule = false
     @State private var addVial = false
     @State private var selectedVial: Vial?
+    var cadenceSummary: String? {
+        let schedule = store.journal.schedule
+        switch schedule.cadence {
+        case .none: return "Tap to choose your dose days"
+        case .weekdays: return nil
+        case .interval: return schedule.intervalDays.map { "Every \($0) days" }
+        case .custom:
+            let upcoming = schedule.occurrences(after: Date(), count: 64).count
+            return upcoming == 0 ? "Custom dates · none upcoming" : "Custom · \(upcoming) date\(upcoming == 1 ? "" : "s") ahead"
+        }
+    }
+    var reminderSummary: String {
+        guard store.journal.schedule.cadence != .none else { return "No reminders" }
+        return store.journal.schedule.enabled ? store.reminderStatus : "Reminders off"
+    }
     var taken: [DoseEntry] { store.journal.doses.filter { $0.medication == store.journal.medication && $0.status == .taken && $0.date <= Date() }.sorted { $0.date > $1.date } }
     var body: some View {
         NavigationStack {
@@ -22,24 +37,27 @@ struct TreatmentView: View {
                     Button { schedule = true } label: {
                         VStack(alignment: .leading, spacing: 16) {
                             HStack { Label("Your schedule", systemImage: "calendar").font(.headline); Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
-                            if let interval = store.journal.schedule.intervalDays {
-                                HStack(spacing: 8) {
-                                    ForEach(store.journal.schedule.occurrences(after: Date(), count: 4), id: \.self) { date in
-                                        VStack(spacing: 4) {
-                                            Text(date, format: .dateTime.weekday(.narrow)).font(.caption2.weight(.bold)).foregroundStyle(Theme.pine)
-                                            Text(date, format: .dateTime.day()).font(.subheadline.weight(.semibold))
-                                        }.frame(maxWidth: .infinity).padding(.vertical, 8).background(Theme.sage, in: RoundedRectangle(cornerRadius: 12))
-                                    }
-                                }
-                                Text("Every \(interval) days").font(.caption).foregroundStyle(.secondary)
-                            } else {
+                            switch store.journal.schedule.cadence {
+                            case .none:
+                                Text("No schedule set").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                            case .weekdays:
                                 HStack(spacing: 0) {
                                     ForEach([2,3,4,5,6,7,1], id: \.self) { day in
                                         Text(String(Calendar.current.shortWeekdaySymbols[day-1].prefix(1))).font(.caption.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 36).background(store.journal.schedule.weekdays.contains(day) ? Theme.pine : Color.clear, in: Circle()).foregroundStyle(store.journal.schedule.weekdays.contains(day) ? Theme.background : Color.secondary)
                                     }
                                 }
+                            case .interval, .custom:
+                                UpcomingDoseDates(dates: store.journal.schedule.occurrences(after: Date(), count: 4))
                             }
-                            Label(store.journal.schedule.enabled ? store.reminderStatus : "Reminders off", systemImage: store.journal.schedule.enabled ? "bell" : "bell.slash").font(.caption).foregroundStyle(.secondary)
+                            // Cadence on the left, reminder state on the right, so the summary stays one line.
+                            HStack(alignment: .firstTextBaseline) {
+                                if let summary = cadenceSummary {
+                                    Text(summary).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 8)
+                                Label(reminderSummary, systemImage: store.journal.schedule.enabled && store.journal.schedule.cadence != .none ? "bell" : "bell.slash")
+                                    .font(.caption).foregroundStyle(.secondary).layoutPriority(1)
+                            }
                         }.card()
                     }.buttonStyle(.plain).accessibilityIdentifier("editSchedule")
                     HStack { Text("Vials").font(.title3.bold()); Spacer(); Button { addVial = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44).accessibilityLabel("Add Vial") }
@@ -62,6 +80,25 @@ struct TreatmentView: View {
                 .sheet(isPresented: $schedule) { ScheduleEditor() }
                 .sheet(isPresented: $addVial) { VialEditor() }
                 .sheet(item: $selectedVial) { VialEditor(vial: $0) }
+        }
+    }
+}
+
+/// The next few dose dates as compact day chips.
+struct UpcomingDoseDates: View {
+    let dates: [Date]
+    var body: some View {
+        if dates.isEmpty {
+            Text("No upcoming dates").font(.subheadline.weight(.medium)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: 8) {
+                ForEach(dates, id: \.self) { date in
+                    VStack(spacing: 4) {
+                        Text(date, format: .dateTime.weekday(.narrow)).font(.caption2.weight(.bold)).foregroundStyle(Theme.pine)
+                        Text(date, format: .dateTime.day()).font(.subheadline.weight(.semibold))
+                    }.frame(maxWidth: .infinity).padding(.vertical, 8).background(Theme.sage, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
         }
     }
 }
