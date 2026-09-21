@@ -43,9 +43,10 @@ struct HealthKitWeightChanges: Sendable {
         if observerQuery == nil {
             let query = HKObserverQuery(sampleType: bodyMass, predicate: nil) { _, completion, error in
                 guard error == nil else { completion(); return }
+                let completionToken = HealthKitObserverCompletion(completion)
                 Task { @MainActor in
                     await onChange()
-                    completion()
+                    completionToken.call()
                 }
             }
             observerQuery = query
@@ -95,6 +96,20 @@ struct HealthKitWeightChanges: Sendable {
             }
             store.execute(query)
         }
+    }
+}
+
+/// HealthKit owns this callback and permits exactly one asynchronous invocation.
+/// The wrapper makes that ownership transfer explicit to Swift 6 concurrency checking.
+private final class HealthKitObserverCompletion: @unchecked Sendable {
+    private let handler: () -> Void
+
+    init(_ handler: @escaping () -> Void) {
+        self.handler = handler
+    }
+
+    func call() {
+        handler()
     }
 }
 

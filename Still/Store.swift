@@ -1,5 +1,5 @@
 import SwiftUI
-import UserNotifications
+@preconcurrency import UserNotifications
 
 @MainActor @Observable final class Store {
     var journal = Journal()
