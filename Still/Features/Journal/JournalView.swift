@@ -135,7 +135,7 @@ struct SettingsView: View {
                             }.accessibilityIdentifier("lastHealthSync")
                         }
                     } header: { Text("Apple Health") } footer: {
-                        Text(store.journal.healthKitWeightsEnabled ? "Body weight is re-read each time you open Tendr, and whenever you tap above." : "Read-only. Tendr never writes to Apple Health.")
+                        Text(store.journal.healthKitWeightsEnabled ? "Tendr stays up to date in the background when Apple Health records a new weight. You can also tap above to sync now." : "Read-only. Tendr never writes to Apple Health.")
                     }
                     Section {
                         Toggle("Start weights at first dose", isOn: Binding(

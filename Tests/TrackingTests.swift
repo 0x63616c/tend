@@ -2,6 +2,38 @@ import XCTest
 @testable import StillCore
 
 final class TrackingTests: XCTestCase {
+    func testIncrementalHealthKitChangesPreserveManualWeightsAndApplyUpdatesAndDeletes() {
+        let replacedID = UUID()
+        let deletedID = UUID()
+        let manual = WeightEntry(date: Date(timeIntervalSince1970: 100), kilograms: 80)
+        var journal = Journal()
+        journal.weights = [
+            manual,
+            WeightEntry(date: Date(timeIntervalSince1970: 200), kilograms: 79, healthKitID: replacedID),
+            WeightEntry(date: Date(timeIntervalSince1970: 300), kilograms: 78, healthKitID: deletedID)
+        ]
+        let replacement = WeightEntry(date: Date(timeIntervalSince1970: 400), kilograms: 77, healthKitID: replacedID)
+
+        journal.applyHealthKitWeightChanges(
+            added: [replacement],
+            deletedIDs: [deletedID],
+            replacesAllHealthKitWeights: false
+        )
+
+        XCTAssertEqual(journal.weights, [manual, replacement])
+    }
+
+    func testFullHealthKitImportReplacesOnlyHealthWeights() {
+        let manual = WeightEntry(date: Date(timeIntervalSince1970: 100), kilograms: 80)
+        let current = WeightEntry(date: Date(timeIntervalSince1970: 300), kilograms: 78, healthKitID: UUID())
+        var journal = Journal()
+        journal.weights = [manual, WeightEntry(date: Date(timeIntervalSince1970: 200), kilograms: 79, healthKitID: UUID())]
+
+        journal.applyHealthKitWeightChanges(added: [current], deletedIDs: [], replacesAllHealthKitWeights: true)
+
+        XCTAssertEqual(journal.weights, [manual, current])
+    }
+
     func testAnalyticsKeepsManualWeightsButCollapsesAnObviousHealthDuplicate() {
         let date = Date(timeIntervalSince1970: 1_000)
         let manualDuplicate = WeightEntry(date: date, kilograms: 71.2)
