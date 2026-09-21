@@ -8,6 +8,8 @@ import UserNotifications
     var healthKitStatus = "Not connected"
     let demo: Bool
     private var canWrite = true
+    private var healthKitSyncInFlight = false
+    private var healthKitRefreshRequested = false
     private let file: JournalFile
     var analyticsWeights: [WeightEntry] { journal.weights.resolvedForAnalytics }
     var firstDoseDate: Date? { journal.firstTakenDoseDate }
@@ -25,6 +27,9 @@ import UserNotifications
         if demo { journal = Self.demoJournal() }
         else {
             do { journal = try file.load() } catch { canWrite = false; self.error = "Your journal could not be opened. Please keep the app installed to preserve your data. \(error.localizedDescription)" }
+        }
+        if journal.healthKitWeightsEnabled {
+            Task { @MainActor [weak self] in await self?.startHealthKitBackgroundDelivery() }
         }
     }
     func commit(_ changed: Journal) -> Bool {
@@ -54,15 +59,20 @@ import UserNotifications
     }
     func connectHealthKit() async {
         do {
-            let imported = try await HealthKitWeightStore.requestAndFetch()
+            let changes = try await HealthKitWeightStore.requestAndFetch()
             var next = journal
             next.healthKitWeightsEnabled = true
             next.lastHealthKitSync = Date()
-            next.weights.removeAll { $0.healthKitID != nil }
-            next.weights.append(contentsOf: imported)
+            next.applyHealthKitWeightChanges(
+                added: changes.added,
+                deletedIDs: changes.deletedIDs,
+                replacesAllHealthKitWeights: changes.replacesAllHealthKitWeights
+            )
             if commit(next) {
+                HealthKitWeightStore.saveAnchor(changes.anchorData)
                 let retained = journal.weights.filter { $0.healthKitID != nil }.count
                 healthKitStatus = retained == 0 ? "No weights available" : "Synced \(retained) weights"
+                await startHealthKitBackgroundDelivery()
             }
         } catch {
             healthKitStatus = "Could not sync"
@@ -71,17 +81,43 @@ import UserNotifications
     }
     func refreshHealthKit() async {
         guard journal.healthKitWeightsEnabled else { return }
-        do {
-            let imported = try await HealthKitWeightStore.fetch()
-            var next = journal
-            next.lastHealthKitSync = Date()
-            next.weights.removeAll { $0.healthKitID != nil }
-            next.weights.append(contentsOf: imported)
-            if commit(next) {
-                let retained = journal.weights.filter { $0.healthKitID != nil }.count
-                healthKitStatus = retained == 0 ? "No weights available" : "Synced \(retained) weights"
+        if healthKitSyncInFlight {
+            healthKitRefreshRequested = true
+            return
+        }
+        healthKitSyncInFlight = true
+        repeat {
+            healthKitRefreshRequested = false
+            do {
+                let changes = try await HealthKitWeightStore.fetchChanges()
+                var next = journal
+                next.lastHealthKitSync = Date()
+                next.applyHealthKitWeightChanges(
+                    added: changes.added,
+                    deletedIDs: changes.deletedIDs,
+                    replacesAllHealthKitWeights: changes.replacesAllHealthKitWeights
+                )
+                if commit(next) {
+                    HealthKitWeightStore.saveAnchor(changes.anchorData)
+                    let retained = journal.weights.filter { $0.healthKitID != nil }.count
+                    healthKitStatus = retained == 0 ? "No weights available" : "Synced \(retained) weights"
+                }
+            } catch {
+                healthKitStatus = "Could not sync"
             }
-        } catch { healthKitStatus = "Could not sync" }
+        } while healthKitRefreshRequested
+        healthKitSyncInFlight = false
+    }
+
+    func startHealthKitBackgroundDelivery() async {
+        guard journal.healthKitWeightsEnabled else { return }
+        do {
+            try await HealthKitWeightStore.startBackgroundDelivery { [weak self] in
+                await self?.refreshHealthKit()
+            }
+        } catch {
+            healthKitStatus = "Background sync unavailable"
+        }
     }
     func save(dose: DoseEntry, inputUnit: String? = nil) -> Bool {
         do { try dose.validate(now: Date()) } catch { self.error = error.localizedDescription; return false }

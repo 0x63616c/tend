@@ -28,6 +28,28 @@ public extension Array where Element == WeightEntry {
     }
 }
 
+public extension Journal {
+    /// Applies an incremental HealthKit result without disturbing manually entered weights.
+    /// A nil anchor is treated as a full import so stale HealthKit rows are replaced.
+    mutating func applyHealthKitWeightChanges(
+        added: [WeightEntry],
+        deletedIDs: Set<UUID>,
+        replacesAllHealthKitWeights: Bool
+    ) {
+        let addedIDs = Set(added.compactMap(\.healthKitID))
+        if replacesAllHealthKitWeights {
+            weights.removeAll { $0.healthKitID != nil }
+        } else {
+            weights.removeAll { entry in
+                guard let healthKitID = entry.healthKitID else { return false }
+                return deletedIDs.contains(healthKitID)
+                    || addedIDs.contains(healthKitID)
+            }
+        }
+        weights.append(contentsOf: added)
+    }
+}
+
 public struct WeightSummary {
     public var latest: Double?
     public var lost: Double?
