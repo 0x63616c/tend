@@ -63,36 +63,41 @@ struct TodayView: View {
                             .accessibilityIdentifier("vialCard")
                     }
                     MedicationCard()
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Label("Weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.aqua)
-                            Spacer()
-                            Button { weightSheet = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44).accessibilityLabel("Add Weight").accessibilityIdentifier("logWeight")
-                        }
-                        HStack(alignment: .center, spacing: 24) {
-                            VStack(alignment: .leading, spacing: 5) {
-                                if let latest = summary.latest {
-                                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                        Text(number(store.journal.unit.display(latest))).font(.system(size: 32, weight: .bold, design: .rounded))
-                                        Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
-                                    }
-                                } else {
-                                    Text("No data").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-                                }
-                                Text("Latest").font(.caption).foregroundStyle(.secondary)
+                    Button { tab = 2 } label: {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Label("Weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.aqua)
+                                Spacer()
+                                Color.clear.frame(width: 52, height: 52)
                             }
-                            WeightChart(entries: homeWeights, unit: store.journal.unit, compact: true).frame(height: 65)
-                        }
-                        Divider()
-                        HStack {
-                            stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) }, suffix: store.journal.unit.symbol)
-                            Spacer(); Divider().frame(height: 32); Spacer()
-                            stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) }, suffix: store.journal.unit.symbol, alignment: .trailing)
-                        }
-                    }.card().accessibilityIdentifier("weightCard").contentShape(Rectangle())
-                        .onTapGesture { tab = 2 }
-                        .accessibilityAddTraits(.isButton)
+                            HStack(alignment: .center, spacing: 24) {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    if let latest = summary.latest {
+                                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                            Text(number(store.journal.unit.display(latest))).font(.system(size: 32, weight: .bold, design: .rounded))
+                                            Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
+                                        }
+                                    } else {
+                                        Text("No data").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                                    }
+                                    Text("Latest").font(.caption).foregroundStyle(.secondary)
+                                }
+                                WeightChart(entries: homeWeights, unit: store.journal.unit, compact: true).frame(height: 65).allowsHitTesting(false)
+                            }
+                            Divider()
+                            HStack {
+                                stat(title: (summary.lost ?? 0) >= 0 ? "Total lost" : "Total gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) }, suffix: store.journal.unit.symbol)
+                                Spacer(); Divider().frame(height: 32); Spacer()
+                                stat(title: "Weekly change", value: summary.weeklyChange.map { ($0 > 0 ? "+" : "") + number(store.journal.unit.display($0)) }, suffix: store.journal.unit.symbol, alignment: .trailing)
+                            }
+                        }.card().contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("weightCard")
                         .accessibilityHint("Opens Progress")
+                        .overlay(alignment: .topTrailing) {
+                            Button { weightSheet = true } label: { Image(systemName: "plus.circle.fill").font(.system(size: 30)).frame(width: 52, height: 52) }
+                                .padding(20)
+                                .accessibilityLabel("Add Weight").accessibilityIdentifier("logWeight")
+                        }
 
                 }.padding(.horizontal, 16).padding(.bottom, 24)
             }.background(Theme.background).toolbar(.hidden, for: .navigationBar)
@@ -120,17 +125,44 @@ struct WeightChart: View {
     @State private var selected: Date?
     var compact = false
     var sorted: [WeightEntry] { entries.sorted { $0.date < $1.date } }
+    var trend: [WeightEntry] {
+        let readings = sorted
+        var start = 0
+        var end = 0
+        var sum = 0.0
+        var averages: [WeightEntry] = []
+        for reading in readings {
+            let lower = reading.date.addingTimeInterval(-3.5 * 86400)
+            let upper = reading.date.addingTimeInterval(3.5 * 86400)
+            while end < readings.count && readings[end].date <= upper {
+                sum += readings[end].kilograms
+                end += 1
+            }
+            while start < end && readings[start].date < lower {
+                sum -= readings[start].kilograms
+                start += 1
+            }
+            var averaged = reading
+            averaged.kilograms = sum / Double(end - start)
+            averages.append(averaged)
+        }
+        return averages
+    }
     var bounds: ClosedRange<Double> {
         let values = sorted.map { unit.display($0.kilograms) }
         return ((values.min() ?? 0) - 1)...((values.max() ?? 1) + 1)
     }
     var body: some View {
         Chart {
+            if compact {
+                ForEach(trend) { entry in
+                    AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
+                        .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.catmullRom)
+                    LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.catmullRom)
+                }
+            }
             ForEach(sorted) { entry in
-            AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
-                .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.monotone)
-            LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.monotone)
-            if entry.id == sorted.last?.id { PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(45) }
+                PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(compact ? 16 : 45)
             }
             if let selected, let nearest = sorted.min(by: { abs($0.date.timeIntervalSince(selected)) < abs($1.date.timeIntervalSince(selected)) }) {
                 RuleMark(x: .value("Selected", nearest.date)).foregroundStyle(.secondary.opacity(0.4)).annotation(position: .top) { Text("\(number(unit.display(nearest.kilograms))) \(unit.symbol)").font(.caption.bold()).padding(5).background(Theme.card, in: Capsule()) }
@@ -139,7 +171,7 @@ struct WeightChart: View {
             .chartXScale(range: .plotDimension(padding: compact ? 4 : 20))
             .chartXAxis { if !compact { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } } }
             .chartYAxis { if !compact { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.12)); AxisValueLabel() } } }
-            .accessibilityLabel("Weight history in \(unit.symbol)")
+            .accessibilityLabel(compact ? "Weight history in \(unit.symbol): seven-day trend and recorded weigh-ins" : "Recorded weigh-ins in \(unit.symbol)")
     }
 }
 
@@ -149,14 +181,27 @@ struct ProgressViewScreen: View {
     @State private var adding = false
     var entries: [WeightEntry] { store.analyticsWeights.filter { $0.date <= Date() && (range == 0 || $0.date >= Calendar.current.date(byAdding: .day, value: -range, to: Date())!) }.sorted { $0.date < $1.date } }
     var summary: WeightSummary { WeightSummary(entries: entries, now: Date()) }
+    var currentWeight: Double? { WeightSummary(entries: store.analyticsWeights, now: Date()).latest }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     PageHeader("Progress") {
-                        Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44)
+                        Button { adding = true } label: { Image(systemName: "plus.circle.fill").font(.system(size: 30)).frame(width: 52, height: 52) }
                             .accessibilityLabel("Log weight")
                     }.padding(.horizontal, 8)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Current weight", systemImage: "scalemass.fill").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.aqua)
+                        if let currentWeight {
+                            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                                Text(number(store.journal.unit.display(currentWeight))).font(.system(size: 40, weight: .bold, design: .rounded))
+                                Text(store.journal.unit.symbol).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("No weight recorded").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Text("Latest recorded weight").font(.caption).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading).card().accessibilityIdentifier("currentWeightCard")
                     GoalCard()
                     Text("Weight").font(.title.bold())
                     HStack {
@@ -165,16 +210,10 @@ struct ProgressViewScreen: View {
                         FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year")])
                     }
                     VStack(alignment: .leading, spacing: 20) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
-                            Spacer()
-                            if let latest = summary.latest {
-                                Text("\(number(store.journal.unit.display(latest))) \(store.journal.unit.symbol)").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                            }
-                        }
+                        Text("RECORDED WEIGHTS").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
                         if summary.latest != nil {
                             WeightChart(entries: entries, unit: store.journal.unit).frame(height: 220)
-                        } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your trend.")) }
+                        } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your history.")) }
                     }.card()
                     HStack(spacing: 14) {
                         metric(title: (summary.lost ?? 0) >= 0 ? "Weight lost" : "Weight gained", value: summary.lost.map { number(store.journal.unit.display(abs($0))) }, foot: store.journal.unit.symbol, icon: "arrow.down.right")

@@ -252,6 +252,48 @@ final class StillUITests: XCTestCase {
         app.buttons["About medication estimates"].tap()
         XCTAssertTrue(app.navigationBars["About this graph"].waitForExistence(timeout: 5))
     }
+    @MainActor func testWeightCardTapTargets() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        app.swipeUp()
+        capture("Weight Home")
+
+        for point in [CGVector(dx: 0.15, dy: 0.15), CGVector(dx: 0.18, dy: 0.5), CGVector(dx: 0.8, dy: 0.5), CGVector(dx: 0.5, dy: 0.9)] {
+            let card = app.descendants(matching: .any).matching(identifier: "weightCard").firstMatch
+            XCTAssertTrue(card.waitForExistence(timeout: 5))
+            card.coordinate(withNormalizedOffset: point).tap()
+            XCTAssertTrue(app.staticTexts["pageHeader-Progress"].waitForExistence(timeout: 5), "Weight card tap at \(point) should open Progress")
+            app.buttons["Home"].tap()
+        }
+
+        app.buttons["logWeight"].tap()
+        XCTAssertTrue(app.textFields["weightAmount"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["pageHeader-Progress"].exists)
+        app.buttons["Cancel"].tap()
+        XCTAssertGreaterThanOrEqual(app.buttons["logWeight"].frame.width, 50)
+
+        app.buttons["Progress"].tap()
+        let currentWeight = app.descendants(matching: .any).matching(identifier: "currentWeightCard").firstMatch
+        XCTAssertTrue(currentWeight.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Latest recorded weight"].exists)
+        XCTAssertTrue(app.staticTexts["195.1"].exists)
+        XCTAssertTrue(app.staticTexts["RECORDED WEIGHTS"].exists)
+        let goalDate = Calendar.current.date(byAdding: .day, value: 60, to: Calendar.current.startOfDay(for: Date()))!
+        XCTAssertFalse(app.staticTexts[goalDate.formatted(.dateTime.month(.abbreviated).day().year())].exists)
+        Thread.sleep(forTimeInterval: 1)
+        capture("Weight Progress Top")
+        let addWeight = app.buttons["Log weight"]
+        XCTAssertGreaterThanOrEqual(addWeight.frame.width, 50)
+        addWeight.tap()
+        XCTAssertTrue(app.textFields["weightAmount"].waitForExistence(timeout: 5))
+        app.buttons["Cancel"].tap()
+        app.swipeUp()
+        app.swipeUp()
+        app.swipeUp()
+        Thread.sleep(forTimeInterval: 1)
+        capture("Weight Progress Chart")
+    }
     @MainActor func testCustomDatesCanBeChosenAndTheScheduleCleared() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
