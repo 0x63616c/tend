@@ -26,7 +26,6 @@ struct GoalCard: View {
                     } else {
                         goalValue("GOAL", kilograms: goal.kilograms, alignment: .leading)
                     }
-                    if let date = goal.date { Text(date, format: .dateTime.month(.abbreviated).day().year()).font(.caption).foregroundStyle(.secondary) }
                 } else { Text("Set a weight goal").font(.headline) }
             }.card()
         }.buttonStyle(.plain).sheet(isPresented: $editing) { GoalEditor() }
