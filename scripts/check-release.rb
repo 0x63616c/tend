@@ -4,6 +4,7 @@ ENV["ASC_KEY_ID"] = "test-key"
 ENV["ASC_ISSUER_ID"] = "test-issuer"
 ENV["ASC_KEY_CONTENT"] = "test-only"
 ENV.delete("ASC_KEY_PATH")
+ENV["RUNNER_TEMP"] = File.expand_path("../build", __dir__)
 
 module UI
   def self.user_error!(message)
@@ -13,7 +14,7 @@ end
 
 class ReleaseCheck
   attr_reader :calls
-  attr_accessor :fail_tests
+  attr_accessor :fail_tests, :fail_provisioning
 
   def initialize
     @calls = []
@@ -48,6 +49,12 @@ class ReleaseCheck
     @calls << [:build, args]
   end
 
+  def get_provisioning_profile(**args)
+    @calls << [:profile, args]
+    raise "provisioning failure" if fail_provisioning
+    "12345678-1234-1234-1234-123456789ABC"
+  end
+
   def upload_to_testflight(**args)
     @calls << [:upload, args]
   end
@@ -66,20 +73,26 @@ raise "distribution" unless upload[:groups] == ["Owner Preview"] && upload[:skip
 
 check.calls.clear
 ENV["GITHUB_ACTIONS"] = "true"
+check.fail_provisioning = true
 begin
   check.beta({})
-  raise "accepted missing signing"
+  raise "ignored provisioning failure"
 rescue RuntimeError => error
-  raise unless error.message.include?("CI signing is missing")
+  raise unless error.message == "provisioning failure"
 end
 raise "uploaded without signing" if check.calls.assoc(:upload)
 
 check.calls.clear
-ENV["TENDR_PROFILE_UUID"] = "12345678-1234-1234-1234-123456789ABC"
+check.fail_provisioning = false
+ENV["TENDR_PROFILE_UUID"] = "unusable-xcode-managed-profile"
 check.beta({})
+profile = check.calls.assoc(:profile).last
+raise "wrong profile selection" unless profile[:provisioning_name] == "Tendr CI App Store" && profile[:ignore_profiles_with_different_name] && profile[:api_key][:key_id] == "test-key"
+raise "release order" unless check.calls.map(&:first) == [:sh, :latest, :profile, :build, :upload]
+profile_uuid = "12345678-1234-1234-1234-123456789ABC"
 build = check.calls.assoc(:build).last
-raise "CI archive signing" unless build[:xcargs].include?("CODE_SIGN_STYLE=Manual") && build[:xcargs].include?("PROVISIONING_PROFILE_SPECIFIER=#{ENV['TENDR_PROFILE_UUID']}")
-raise "CI export signing" unless build[:export_options][:provisioningProfiles] == { "com.calumwebb.still" => ENV["TENDR_PROFILE_UUID"] } && build[:export_xcargs].empty?
+raise "CI archive signing" unless build[:xcargs].include?("CODE_SIGN_STYLE=Manual") && build[:xcargs].include?("PROVISIONING_PROFILE_SPECIFIER=#{profile_uuid}")
+raise "CI export signing" unless build[:export_options][:provisioningProfiles] == { "com.calumwebb.still" => profile_uuid } && build[:export_xcargs].empty?
 
 check.calls.clear
 check.fail_tests = true
