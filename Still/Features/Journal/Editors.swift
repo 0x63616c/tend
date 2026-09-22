@@ -56,7 +56,6 @@ struct DoseEditor: View {
     @State private var mode = "mg"
     @State private var vialID: UUID?
     @State private var confirmedU100 = false
-    @State private var addingVial = false
     @State private var preferences = false
     @State private var localError: String?
     var vial: Vial? { store.journal.vials.first { $0.id == vialID } }
@@ -74,9 +73,11 @@ struct DoseEditor: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack { Image(systemName: "syringe.fill").foregroundStyle(.indigo); Text(entry?.medication ?? vial?.medication ?? store.journal.medication).font(.headline); Spacer() }
-                    if let intended = entry?.scheduledDate ?? scheduledDate {
-                        Label { Text(intended, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()) } icon: { Image(systemName: "calendar") }.font(.subheadline).foregroundStyle(.secondary)
+                    if let entry {
+                        HStack { Image(systemName: "syringe.fill").foregroundStyle(.indigo); Text(entry.medication).font(.headline); Spacer() }
+                        if let intended = entry.scheduledDate ?? scheduledDate {
+                            Label { Text(intended, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()) } icon: { Image(systemName: "calendar") }.font(.subheadline).foregroundStyle(.secondary)
+                        }
                     }
                     if status != .skipped {
                         VStack(spacing: 16) {
@@ -104,7 +105,6 @@ struct DoseEditor: View {
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 if let concentration { HStack { Text("Concentration"); Spacer(); Text("\(number(concentration, digits: 3)) mg/mL") }.font(.caption).foregroundStyle(.secondary) }
-                                Button { addingVial = true } label: { Label("Add a vial", systemImage: "plus") }.buttonStyle(.bordered).font(.subheadline)
                             }.card()
                         }
                     }
@@ -126,7 +126,6 @@ struct DoseEditor: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     if let entry { ToolbarItem(placement: .topBarTrailing) { DeleteEntryButton { store.delete(dose: entry) } } }
                 }
-                .sheet(isPresented: $addingVial) { VialEditor() }
                 .sheet(isPresented: $preferences, onDismiss: { confirmedU100 = store.journal.syringeUnitsPerML == 100 }) { DosePreferencesEditor() }
                 .onAppear {
                     guard !initialized else { return }; initialized = true
