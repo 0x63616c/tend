@@ -60,7 +60,7 @@ struct TreatmentView: View {
                             }
                         }.card()
                     }.buttonStyle(.plain).accessibilityIdentifier("editSchedule")
-                    HStack { Text("Vials").font(.title3.bold()); Spacer(); Button { addVial = true } label: { Image(systemName: "plus.circle.fill").font(.title2) }.frame(width: 44, height: 44).accessibilityLabel("Add Vial") }
+                    HStack { Text("Vials").font(.title3.bold()); Spacer(); Button { addVial = true } label: { Image(systemName: "plus.circle.fill").font(.largeTitle) }.frame(width: 52, height: 52).accessibilityLabel("Add Vial") }
                     if store.journal.vials.isEmpty { Button("Add your first vial") { addVial = true }.frame(maxWidth: .infinity).card() }
                     ForEach(store.journal.vials.sorted { $0.received > $1.received }) { vial in
                         Button { selectedVial = vial } label: { VialSummary(vial: vial) }.buttonStyle(.plain)
@@ -68,7 +68,7 @@ struct TreatmentView: View {
                     if !taken.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             HStack { Text("Dose history").font(.headline); Spacer(); Text("\(taken.count)").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary) }
-                            HStack { Text("Taken"); Spacer(); Text("\(number(taken.reduce(0) { $0 + $1.milligrams }, digits: 2)) mg").font(.caption).foregroundStyle(.secondary) }
+                            HStack { Text("Taken"); Spacer(); Text("\(number(taken.reduce(0) { $0 + $1.milligrams }, digits: 2)) mg").foregroundStyle(.secondary) }.font(.subheadline)
                             ForEach(taken.prefix(4)) { dose in
                                 HStack { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green); Text(dose.date, format: .dateTime.month(.abbreviated).day()); Spacer(); Text("\(number(dose.milligrams, digits: 3)) mg").monospacedDigit() }.font(.subheadline)
                             }

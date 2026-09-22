@@ -5,12 +5,13 @@ struct VialSummary: View {
     var vial: Vial
     var used: Double { store.journal.doses.filter { $0.vialID == vial.id && $0.status == .taken && $0.date <= Date() }.reduce(0) { $0 + $1.milligrams / ($1.concentration ?? vial.concentration) } }
     var remaining: Double { max(0, vial.volumeML - used) }
+    var fraction: Double { remaining / vial.volumeML }
     var body: some View {
         HStack(spacing: 16) {
-            VialGlyph(fraction: remaining / vial.volumeML)
+            VialGlyph(fraction: fraction)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Current vial").font(.subheadline.weight(.semibold))
-                Text("\(number(remaining, digits: 2)) of \(number(vial.volumeML)) mL remaining").font(.caption).foregroundStyle(.secondary)
+                Text("\(fraction, format: .percent.precision(.fractionLength(0))) remaining · \(number(remaining, digits: 2)) of \(number(vial.volumeML)) mL").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             Text("\(number(vial.concentration)) mg/mL").font(.caption.weight(.medium)).multilineTextAlignment(.trailing).foregroundStyle(.secondary)
