@@ -154,12 +154,10 @@ struct WeightChart: View {
     }
     var body: some View {
         Chart {
-            if compact {
-                ForEach(trend) { entry in
-                    AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
-                        .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.catmullRom)
-                    LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.catmullRom)
-                }
+            ForEach(trend) { entry in
+                AreaMark(x: .value("Date", entry.date), yStart: .value("Base", bounds.lowerBound), yEnd: .value("Weight", unit.display(entry.kilograms)))
+                    .foregroundStyle(LinearGradient(colors: [Theme.aqua.opacity(0.18), Theme.aqua.opacity(0.01)], startPoint: .top, endPoint: .bottom)).interpolationMethod(.catmullRom)
+                LineMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)).interpolationMethod(.catmullRom)
             }
             ForEach(sorted) { entry in
                 PointMark(x: .value("Date", entry.date), y: .value("Weight", unit.display(entry.kilograms))).foregroundStyle(Theme.aqua).symbolSize(compact ? 16 : 45)
@@ -171,7 +169,7 @@ struct WeightChart: View {
             .chartXScale(range: .plotDimension(padding: compact ? 4 : 20))
             .chartXAxis { if !compact { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } } }
             .chartYAxis { if !compact { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.12)); AxisValueLabel() } } }
-            .accessibilityLabel(compact ? "Weight history in \(unit.symbol): seven-day trend and recorded weigh-ins" : "Recorded weigh-ins in \(unit.symbol)")
+            .accessibilityLabel("Weight history in \(unit.symbol): seven-day trend and recorded weigh-ins")
     }
 }
 
@@ -210,7 +208,11 @@ struct ProgressViewScreen: View {
                         FilterBar(selection: $range, options: [(30, "Month"), (90, "3 months"), (365, "Year")])
                     }
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("RECORDED WEIGHTS").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
+                        HStack {
+                            Text("WEIGHT TREND").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
+                            Spacer()
+                            Text("7-day average").font(.caption).foregroundStyle(.secondary)
+                        }
                         if summary.latest != nil {
                             WeightChart(entries: entries, unit: store.journal.unit).frame(height: 220)
                         } else { ContentUnavailableView("Your story starts here", systemImage: "chart.xyaxis.line", description: Text("Add a weight entry to see your history.")) }
