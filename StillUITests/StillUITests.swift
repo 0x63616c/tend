@@ -278,7 +278,8 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(currentWeight.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Latest recorded weight"].exists)
         XCTAssertTrue(app.staticTexts["195.1"].exists)
-        XCTAssertTrue(app.staticTexts["RECORDED WEIGHTS"].exists)
+        XCTAssertTrue(app.staticTexts["WEIGHT TREND"].exists)
+        XCTAssertTrue(app.staticTexts["7-day average"].exists)
         let goalDate = Calendar.current.date(byAdding: .day, value: 60, to: Calendar.current.startOfDay(for: Date()))!
         XCTAssertFalse(app.staticTexts[goalDate.formatted(.dateTime.month(.abbreviated).day().year())].exists)
         Thread.sleep(forTimeInterval: 1)
