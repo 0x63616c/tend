@@ -1,30 +1,29 @@
 # Automatic TestFlight releases
 
-[TestFlight workflow](../.github/workflows/testflight.yml) runs `bundle exec fastlane ios beta` on every push to `main`, including PR merges. It uses macOS 15 with Xcode 26.2 and Ruby 3.4, installs the locked gems, runs core tests, archives, uploads, waits for Apple processing, and assigns the build to **Owner Preview**. The checked-in Xcode project is used directly; CI does not need XcodeGen. A manual dispatch on `main` is available for recovery.
+[TestFlight workflow](../.github/workflows/testflight.yml) runs `bundle exec fastlane ios beta` on every push to `main`, including PR merges. It uses macOS 15 with Xcode 26.2 and Ruby 3.4, installs the locked gems, runs core tests, archives, uploads, waits for Apple processing, and assigns the build to **Owner Preview**. The checked-in Xcode project is used directly; CI does not need XcodeGen. A manual dispatch on `main` is available for recovery. Publishing another selected branch requires explicitly enabling `confirm_branch_release`; this allows a real CI release to validate signing fixes before merging.
 
 Before this workflow, `.github/workflows/core.yml` only tested and built for the simulator. Merging did not invoke Fastlane. Earlier shipped-build commits recorded releases made on the release Mac.
 
 ## Required repository secrets
 
-Add these under repository **Settings → Secrets and variables → Actions**. They were absent when the workflow was introduced; it fails with named missing-secret errors until configured.
+Add these under repository **Settings → Secrets and variables → Actions**. The workflow fails with named missing-secret errors until these six values are configured.
 
 | Secret | Value / format |
 | --- | --- |
 | `ASC_KEY_ID` | App Store Connect API key ID, plain text. |
 | `ASC_ISSUER_ID` | Issuer ID UUID from the same App Store Connect team API key. |
-| `ASC_KEY_CONTENT` | Full raw contents of its `.p8` private key, including PEM header/footer and actual newlines. Do not base64 encode this value. Use an **App Manager** team key with access to this app so it can upload and manage internal distribution. |
+| `ASC_KEY_CONTENT` | Full raw contents of its `.p8` private key, including PEM header/footer and actual newlines. Do not base64 encode this value. Use an **App Manager** team key with access to this app and Certificates, Identifiers & Profiles so it can manage the CI profile, upload, and manage internal distribution. |
 | `ASC_BETA_FEEDBACK_EMAIL` | Email address to receive beta feedback, plain text. |
 | `BUILD_CERTIFICATE_BASE64` | Base64 of an exported **Apple Distribution** `.p12`, including its private key, for team `X9E4HG27NK`. Export the existing release identity from Keychain Access on the release Mac with a nonempty password. |
 | `P12_PASSWORD` | The password used to encrypt that `.p12`, plain text. |
-| `BUILD_PROVISION_PROFILE_BASE64` | Base64 of a current **App Store Connect / App Store distribution** `.mobileprovision` for `com.calumwebb.still`, team `X9E4HG27NK`, with HealthKit enabled and the supplied distribution certificate included. A development or ad hoc profile will not work. |
 
-On macOS, `base64 -i release.p12 | pbcopy` and `base64 -i release.mobileprovision | pbcopy` produce the two base64 values. Never commit the files or secret values. Replace the profile/certificate secrets before expiry or when capabilities/signing identities change.
+On macOS, `base64 -i release.p12 | pbcopy` produces the certificate value. Never commit the file or secret values. Replace the certificate secret before expiry. `BUILD_PROVISION_PROFILE_BASE64` is no longer read: the originally supplied Xcode-managed profile could not be used with manual archive signing.
 
-The local lane uses Xcode's release-Mac keychain/profile setup and allows provisioning updates during export. There is no `Matchfile`, signing repository, or `match` lane. CI imports the same kind of existing signing assets into an ephemeral keychain and selects the supplied profile explicitly for both archive and export. It does not create certificates or require an Apple ID session. The App Store Connect API key authenticates Fastlane; it does not contain the private code-signing key. The workflow generates its own temporary keychain password and cleans up signing files even after failure; GitHub also destroys the hosted runner afterward. This follows [GitHub's certificate import approach](https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications) and [Fastlane's explicit export profile mapping](https://docs.fastlane.tools/actions/build_app/#export-options).
+The local lane uses Xcode's release-Mac keychain/profile setup and allows provisioning updates during export. There is no `Matchfile`, signing repository, or `match` lane. CI imports the existing distribution identity into an ephemeral keychain. Fastlane `get_provisioning_profile` (`sigh`) uses the same API key to fetch or create the dedicated **Tendr CI App Store** profile for the installed certificate. The lane requires this exact profile name, then selects the returned UUID for both archive and export. It does not create certificates, use Xcode-managed profiles, or require an Apple ID session. If the API key lacks Developer Portal access, provisioning fails before archiving. Profile creation and selection follow [Fastlane sigh](https://docs.fastlane.tools/actions/get_provisioning_profile/). The App Store Connect API key authenticates Fastlane and profile management; it does not contain the private code-signing key. The workflow generates its own temporary keychain password and cleans up signing files even after failure; GitHub also destroys the hosted runner afterward. This follows [GitHub's certificate import approach](https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications) and [Fastlane's explicit export profile mapping](https://docs.fastlane.tools/actions/build_app/#export-options).
 
 ## Verification and recovery
 
-Run `ruby scripts/check-release.rb` for a secret-free check of the actual Fastfile's local/CI signing branches, next build number, distribution settings, and failure gates. Run `actionlint .github/workflows/*.yml` for workflow and embedded shell validation. Core CI also runs the lane check on PRs. These checks do not prove that Apple accepts the supplied certificate/profile/key or that a build reached TestFlight.
+Run `ruby scripts/check-release.rb` for a secret-free check of the actual Fastfile's local/CI signing branches, dedicated profile selection, next build number, distribution settings, and failure gates. Run `actionlint .github/workflows/*.yml` for workflow and embedded shell validation. Core CI also runs the lane check on PRs. These checks do not prove that Apple accepts the supplied certificate/profile/key or that a build reached TestFlight.
 
 The workflow serializes publishers because the lane allocates `latest_testflight_build_number + 1`. Do not publish manually while CI is releasing. GitHub keeps one running and one pending run per concurrency group; rapid merges can supersede a pending run, with their changes included in the later main build. No release-record commit is pushed back to `main`, avoiding a release loop.
 

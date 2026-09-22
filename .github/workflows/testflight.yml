@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm_branch_release:
+        description: 'Publish this selected non-main branch to TestFlight'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,7 +20,7 @@ concurrency:
 
 jobs:
   beta:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.confirm_branch_release)
     runs-on: macos-15
     timeout-minutes: 90
     env:
@@ -33,10 +38,9 @@ jobs:
           ASC_BETA_FEEDBACK_EMAIL: ${{ secrets.ASC_BETA_FEEDBACK_EMAIL }}
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
           missing=0
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT ASC_BETA_FEEDBACK_EMAIL BUILD_CERTIFICATE_BASE64 P12_PASSWORD BUILD_PROVISION_PROFILE_BASE64; do
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT ASC_BETA_FEEDBACK_EMAIL BUILD_CERTIFICATE_BASE64 P12_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing repository secret $name; see docs/RELEASE.md"
               missing=1
@@ -53,36 +57,26 @@ jobs:
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
           umask 077
           certificate="$RUNNER_TEMP/tendr-signing.p12"
-          profile="$RUNNER_TEMP/tendr.mobileprovision"
           keychain="$RUNNER_TEMP/tendr-signing.keychain-db"
           keychain_password=$(openssl rand -hex 32)
           echo "::add-mask::$keychain_password"
           printf '%s' "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$certificate"
-          printf '%s' "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$profile"
           security create-keychain -p "$keychain_password" "$keychain"
           security set-keychain-settings -lut 21600 "$keychain"
           security unlock-keychain -p "$keychain_password" "$keychain"
           security import "$certificate" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$keychain_password" "$keychain"
           security list-keychains -d user -s "$keychain"
-          security cms -D -i "$profile" > "$RUNNER_TEMP/tendr-profile.plist"
-          profile_uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/tendr-profile.plist")
-          [[ "$profile_uuid" =~ ^[A-Fa-f0-9-]{36}$ ]]
-          profiles="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
-          mkdir -p "$profiles"
-          cp "$profile" "$profiles/$profile_uuid.mobileprovision"
-          echo "TENDR_PROFILE_UUID=$profile_uuid" >> "$GITHUB_ENV"
       - name: Test, upload, and distribute to Owner Preview
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           ASC_BETA_FEEDBACK_EMAIL: ${{ secrets.ASC_BETA_FEEDBACK_EMAIL }}
-        run: bundle exec fastlane ios beta changelog:"Build from main ($GITHUB_SHA)"
+        run: bundle exec fastlane ios beta changelog:"Build from $GITHUB_REF_NAME ($GITHUB_SHA)"
       - name: Remove release signing assets
         if: always()
         run: |
@@ -90,7 +84,10 @@ jobs:
           if [[ -f "$keychain" ]]; then
             security delete-keychain "$keychain"
           fi
-          if [[ -n "${TENDR_PROFILE_UUID:-}" ]]; then
-            rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$TENDR_PROFILE_UUID.mobileprovision"
+          if [[ -f "$RUNNER_TEMP/tendr.mobileprovision" ]]; then
+            security cms -D -i "$RUNNER_TEMP/tendr.mobileprovision" > "$RUNNER_TEMP/tendr-profile.plist"
+            profile_uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/tendr-profile.plist")
+            [[ "$profile_uuid" =~ ^[A-Fa-f0-9-]{36}$ ]]
+            rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$profile_uuid.mobileprovision"
           fi
           rm -f "$RUNNER_TEMP/tendr-signing.p12" "$RUNNER_TEMP/tendr.mobileprovision" "$RUNNER_TEMP/tendr-profile.plist"
