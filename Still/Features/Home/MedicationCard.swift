@@ -8,26 +8,14 @@ struct MedicationCard: View {
     @State private var selected: Date?
     @State private var info = false
     @State private var now = Date()
+    @State private var cachedPlot: MedicationPlot?
     var model: MedicationModel { store.journal.resolvedMedicationModel }
-    var halfLife: Double { store.journal.halfLifeDays }
-    var chartStart: Date { store.firstDoseDate ?? now }
-    var chartEnd: Date { now.addingTimeInterval(14 * 86400) }
-    /// Recorded doses plus the doses the schedule implies, so the projection shows what is coming.
-    var projected: [DoseEntry] { store.journal.scheduledProjection(from: now, through: chartEnd) }
-    var chartDoses: [DoseEntry] { store.journal.doses + projected }
-    var samples: [LevelSample] {
-        let count = expanded ? 720 : 360
-        let span = max(1, chartEnd.timeIntervalSince(chartStart))
-        return (0...count).map { offset in
-            let date = chartStart.addingTimeInterval(span * Double(offset) / Double(count))
-            return LevelSample(date: date, amount: amount(at: date), future: date > now)
-        }
-    }
-    func amount(at date: Date) -> Double {
-        MedicationLevel.remaining(at: date, doses: chartDoses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: now, model: model)
+    private func makePlot() -> MedicationPlot {
+        MedicationPlot(journal: store.journal, start: store.firstDoseDate ?? now, now: now, expanded: expanded)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let plot = cachedPlot ?? makePlot()
+        let content = VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(store.journal.medication.uppercased()).font(.system(size: 10, weight: .bold)).tracking(1.6).foregroundStyle(Theme.pine)
@@ -36,12 +24,11 @@ struct MedicationCard: View {
                 Spacer()
                 Button { info = true } label: { Image(systemName: "info.circle").foregroundStyle(.secondary) }.accessibilityLabel("About medication estimates")
             }
-            // Recalculate against real time at 60 Hz so high-precision digits do not jump in one-second batches.
-            TimelineView(.animation(minimumInterval: 1.0 / 60, paused: selected != nil)) { context in
+            // Refresh the digits smoothly; the sampled chart is cached while the selection moves.
+            TimelineView(.animation(minimumInterval: 1.0 / 15, paused: selected != nil)) { context in
                 let timestamp = selected ?? context.date
-                let value = MedicationLevel.remaining(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
-                let slope = MedicationLevel.rate(at: timestamp, doses: store.journal.doses, medication: store.journal.medication, halfLifeDays: halfLife, includePlans: true, now: context.date, model: model)
-                let reference = max(value, (store.journal.doses.filter { $0.medication.caseInsensitiveCompare(store.journal.medication) == .orderedSame && $0.status == .taken && $0.date <= context.date }.map(\.milligrams).max() ?? 0) * 0.1)
+                let (value, slope) = plot.levelAndRate(at: timestamp, referenceNow: selected == nil ? context.date : plot.now)
+                let reference = max(value, plot.referenceDose * 0.1)
                 let trend = MedicationLevel.trend(rate: slope, reference: reference)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(value.formatted(.number.precision(.fractionLength(7)))).font(.system(size: 38, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("liveMedicationAmount").minimumScaleFactor(0.6).lineLimit(1)
@@ -56,42 +43,24 @@ struct MedicationCard: View {
                             .accessibilityIdentifier("medicationTrendIndicator")
                     }
                     Spacer()
+                    if selected != nil {
+                        Button("Live") { selected = nil }.font(.caption).buttonStyle(.borderless)
+                    }
                 }
             }
-            Chart {
-                ForEach(samples.filter { !$0.future }) { point in
-                    AreaMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount)).foregroundStyle(LinearGradient(colors: [Theme.pine.opacity(0.20), Theme.pine.opacity(0.01)], startPoint: .top, endPoint: .bottom))
-                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "History")).foregroundStyle(Theme.pine).lineStyle(StrokeStyle(lineWidth: 2.5))
-                }
-                ForEach(samples.filter { $0.date >= now }) { point in
-                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "Projection")).foregroundStyle(Theme.pine.opacity(0.65)).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
-                }
-                ForEach(chartDoses.filter { $0.status == .planned && $0.date > now && $0.date <= chartEnd }) { dose in
-                    PointMark(x: .value("Date", dose.date), y: .value("Estimated mg", amount(at: dose.date)))
-                        .foregroundStyle(Theme.pine.opacity(0.55)).symbolSize(28).symbol(.circle)
-                }
-                RuleMark(x: .value("Now", now)).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                PointMark(x: .value("Date", selected ?? now), y: .value("Estimate", amount(at: selected ?? now))).foregroundStyle(Theme.pine).symbolSize(55)
-            }
-            .chartXSelection(value: Binding(get: { expanded ? selected : nil }, set: { if expanded { selected = $0 } }))
-            .chartXScale(domain: chartStart...chartEnd)
-            .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
-            .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
-            .frame(height: expanded ? 300 : 145)
-            .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart")
-            .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
-            if !expanded, !projected.isEmpty {
-                Text("Dashed line includes \(projected.count) scheduled dose\(projected.count == 1 ? "" : "s") at your usual amount.")
-                    .font(.caption2).foregroundStyle(.secondary)
-            }
-        }.card()
-        // The whole card is the tap target; the info button and chart selection still take their own taps first.
-        .contentShape(Rectangle())
-        .simultaneousGesture(TapGesture().onEnded { if !expanded { detail = true } })
+            graph(plot)
+        }.card().contentShape(Rectangle())
+        Group {
+            if expanded { content }
+            else { content.onTapGesture { detail = true } }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(expanded ? [] : .isButton)
         .accessibilityAction(named: "View details") { if !expanded { detail = true } }
         .accessibilityIdentifier(expanded ? "medicationDetailCard" : "medicationCard")
+        .onAppear { if cachedPlot == nil { cachedPlot = plot } }
+        .onChange(of: now) { _, _ in cachedPlot = makePlot() }
+        .onChange(of: store.journal) { _, _ in cachedPlot = makePlot() }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
         .navigationDestination(isPresented: $detail) {
             ScrollView {
@@ -113,7 +82,7 @@ struct MedicationCard: View {
                     Section("Projection") { Text("The dashed line includes future doses you explicitly entered and, when you have a schedule, the dates it implies. Scheduled doses are drawn at the average of your last three recorded doses, are never counted as already taken, and are not added to your journal. Log each dose as you take it.") }
                     Section("Model") {
                         Text(model.title)
-                        if model == .halfLife { Text("Immediate absorption with a \(number(halfLife))-day half-life. Choose an injection model in Treatment details to include absorption.") }
+                        if model == .halfLife { Text("Immediate absorption with a \(number(store.journal.halfLifeDays))-day half-life. Choose an injection model in Treatment details to include absorption.") }
                         else { Text("Two compartments with first-order absorption and elimination. The displayed mg excludes medication still at the injection site. Reference profiles are fixed; individual weight, health, injection site and formulation can change the real curve.") }
                         Link("Semaglutide model · Overgaard 2019", destination: URL(string: "https://doi.org/10.1007/s13300-019-0581-y")!)
                         Link("Tirzepatide model · Schneck 2024", destination: URL(string: "https://doi.org/10.1002/psp4.13099")!)
@@ -122,12 +91,87 @@ struct MedicationCard: View {
             }
         }
     }
+    @ViewBuilder private func graph(_ plot: MedicationPlot) -> some View {
+        let chart = Chart {
+                ForEach(plot.history) { point in
+                    AreaMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount)).foregroundStyle(LinearGradient(colors: [Theme.pine.opacity(0.20), Theme.pine.opacity(0.01)], startPoint: .top, endPoint: .bottom))
+                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "History")).foregroundStyle(Theme.pine).lineStyle(StrokeStyle(lineWidth: 2.5))
+                }
+                ForEach(plot.projection) { point in
+                    LineMark(x: .value("Date", point.date), y: .value("Estimated mg", point.amount), series: .value("Series", "Projection")).foregroundStyle(Theme.pine.opacity(0.65)).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                }
+                ForEach(plot.planned) { dose in
+                    PointMark(x: .value("Date", dose.date), y: .value("Estimated mg", plot.amount(at: dose.date)))
+                        .foregroundStyle(Theme.pine.opacity(0.55)).symbolSize(28).symbol(.circle)
+                }
+                RuleMark(x: .value("Now", plot.now)).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                PointMark(x: .value("Date", selected ?? plot.now), y: .value("Estimate", plot.amount(at: selected ?? plot.now))).foregroundStyle(Theme.pine).symbolSize(55)
+            }
+            .chartXScale(domain: plot.start...plot.end)
+            .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
+            .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in AxisGridLine().foregroundStyle(.gray.opacity(0.1)); AxisValueLabel() } }
+            .frame(height: expanded ? 300 : 145)
+            .accessibilityIdentifier(expanded ? "medicationDetailChart" : "medicationChart")
+            .accessibilityLabel("Estimated medication level. Solid line shows history; dashed line shows projection.")
+        if expanded {
+            chart.chartXSelection(value: Binding(get: { selected }, set: { if let date = $0 { selected = date } }))
+        } else { chart }
+    }
 }
 struct LevelSample: Identifiable {
     var id: Date { date }
     let date: Date
     let amount: Double
     let future: Bool
+}
+
+private struct MedicationPlot {
+    let start: Date
+    let end: Date
+    let now: Date
+    let doses: [DoseEntry]
+    let history: [LevelSample]
+    let projection: [LevelSample]
+    let planned: [DoseEntry]
+    let medication: String
+    let halfLifeDays: Double
+    let model: MedicationModel
+    let referenceDose: Double
+
+    init(journal: Journal, start: Date, now: Date, expanded: Bool) {
+        let end = now.addingTimeInterval(14 * 86400)
+        let doses = journal.doses + journal.scheduledProjection(from: now, through: end)
+        let medication = journal.medication
+        let halfLifeDays = journal.halfLifeDays
+        let model = journal.resolvedMedicationModel
+        let count = expanded ? 360 : 180
+        let span = max(1, end.timeIntervalSince(start))
+        let samples = (0...count).map { offset in
+            let date = start.addingTimeInterval(span * Double(offset) / Double(count))
+            let amount = MedicationLevel.remaining(at: date, doses: doses, medication: medication, halfLifeDays: halfLifeDays, includePlans: true, now: now, model: model)
+            return LevelSample(date: date, amount: amount, future: date > now)
+        }
+        self.start = start
+        self.end = end
+        self.now = now
+        self.doses = doses
+        self.history = samples.filter { !$0.future }
+        self.projection = samples.filter { $0.date >= now }
+        self.planned = doses.filter { $0.status == .planned && $0.date > now && $0.date <= end }
+        self.medication = medication
+        self.halfLifeDays = halfLifeDays
+        self.model = model
+        self.referenceDose = journal.doses.filter { $0.medication.caseInsensitiveCompare(medication) == .orderedSame && $0.status == .taken && $0.date <= now }.map(\.milligrams).max() ?? 0
+    }
+    func amount(at date: Date) -> Double {
+        MedicationLevel.remaining(at: date, doses: doses, medication: medication, halfLifeDays: halfLifeDays, includePlans: true, now: now, model: model)
+    }
+    func levelAndRate(at date: Date, referenceNow: Date) -> (Double, Double) {
+        let eligible = doses.filter { $0.date <= date }
+        let value = MedicationLevel.remaining(at: date, doses: eligible, medication: medication, halfLifeDays: halfLifeDays, includePlans: true, now: referenceNow, model: model)
+        let next = MedicationLevel.remaining(at: date.addingTimeInterval(1), doses: eligible, medication: medication, halfLifeDays: halfLifeDays, includePlans: true, now: referenceNow, model: model)
+        return (value, (next - value) * 3600)
+    }
 }
 
 struct MedicationAnalytics: View {
