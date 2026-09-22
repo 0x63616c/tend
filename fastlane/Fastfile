@@ -1,3 +1,5 @@
+require "shellwords"
+
 default_platform(:ios)
 
 APP_IDENTIFIER = "com.calumwebb.still"
@@ -70,6 +72,22 @@ platform :ios do
       initial_build_number: 0
     ) + 1
 
+    xcargs = "MARKETING_VERSION=#{version} CURRENT_PROJECT_VERSION=#{build_number}"
+    export_options = {}
+    profile_uuid = ENV["TENDR_PROFILE_UUID"]
+    if ENV["GITHUB_ACTIONS"] == "true" && profile_uuid.to_s.empty?
+      UI.user_error!("CI signing is missing TENDR_PROFILE_UUID; see docs/RELEASE.md")
+    end
+    unless profile_uuid.to_s.empty?
+      # CI imports the release identity/profile; local Xcode signing stays automatic.
+      xcargs += " CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER=#{Shellwords.escape(profile_uuid)}"
+      export_options = {
+        signingStyle: "manual",
+        signingCertificate: "Apple Distribution",
+        provisioningProfiles: { APP_IDENTIFIER => profile_uuid }
+      }
+    end
+
     build_app(
       project: "Still.xcodeproj",
       scheme: "Still",
@@ -77,8 +95,9 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build/fastlane",
       output_name: "Tendr-#{version}-#{build_number}.ipa",
-      xcargs: "MARKETING_VERSION=#{version} CURRENT_PROJECT_VERSION=#{build_number}",
-      export_xcargs: "-allowProvisioningUpdates"
+      xcargs: xcargs,
+      export_options: export_options,
+      export_xcargs: profile_uuid.to_s.empty? ? "-allowProvisioningUpdates" : ""
     )
 
     upload_to_testflight(

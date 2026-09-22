@@ -5,8 +5,11 @@ permissions:
 jobs:
   test:
     runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
+      - run: ruby scripts/check-release.rb
       - run: swift test
       - name: Build iOS app
         run: xcodebuild -project Still.xcodeproj -scheme Still -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
