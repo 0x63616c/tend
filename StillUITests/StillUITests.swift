@@ -257,6 +257,25 @@ final class StillUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No schedule set"].waitForExistence(timeout: 5))
         capture("treatment-cleared")
     }
+    @MainActor func testNewDoseHidesVialAdditionAndMedicationHeaderButEditingShowsThem() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+        app.buttons["logDose"].tap()
+        XCTAssertTrue(app.textFields["doseAmount"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Add a vial"].exists)
+        XCTAssertFalse(app.staticTexts["Semaglutide"].exists)
+        capture("New dose")
+        app.buttons["Cancel"].tap()
+
+        app.buttons["Journal"].tap()
+        let record = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Semaglutide'")).firstMatch
+        XCTAssertTrue(record.waitForExistence(timeout: 5))
+        record.tap()
+        XCTAssertTrue(app.staticTexts["Semaglutide"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Add a vial"].exists)
+        capture("Edit dose")
+    }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways
