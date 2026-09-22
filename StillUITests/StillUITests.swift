@@ -222,6 +222,36 @@ final class StillUITests: XCTestCase {
         app.buttons["Home"].tap()
         XCTAssertTrue(app.buttons["logDose"].waitForExistence(timeout: 5))
     }
+    @MainActor func testMedicationChartTapAndFutureDrag() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo", "--uitest"]
+        app.launch()
+
+        let homeChart = app.descendants(matching: .any).matching(identifier: "medicationChart").firstMatch
+        XCTAssertTrue(homeChart.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Dashed line includes'")).firstMatch.exists)
+        capture("Medication Home")
+        homeChart.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
+        let detailChart = app.descendants(matching: .any).matching(identifier: "medicationDetailChart").firstMatch
+        XCTAssertTrue(detailChart.waitForExistence(timeout: 5), "Tapping the plotted line should open Medication")
+
+        let amount = app.staticTexts["liveMedicationAmount"]
+        let number = NumberFormatter()
+        number.numberStyle = .decimal
+        guard let current = number.number(from: amount.label)?.doubleValue else { XCTFail("Expected a numeric live estimate"); return }
+        let start = detailChart.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.5))
+        let future = detailChart.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        start.press(forDuration: 0.2, thenDragTo: future)
+        XCTAssertTrue(app.buttons["Live"].exists, "The future selection should remain visible after the drag")
+        guard let futureAmount = number.number(from: amount.label)?.doubleValue else { XCTFail("Expected a numeric future estimate"); return }
+        XCTAssertGreaterThan(futureAmount, current + 0.1, "The readout should include scheduled future doses shown by the curve")
+        capture("Medication future selection")
+        app.buttons["Live"].tap()
+        XCTAssertFalse(app.buttons["Live"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["About medication estimates"].tap()
+        XCTAssertTrue(app.navigationBars["About this graph"].waitForExistence(timeout: 5))
+    }
     @MainActor func testCustomDatesCanBeChosenAndTheScheduleCleared() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo", "--uitest"]
